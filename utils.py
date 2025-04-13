@@ -122,12 +122,15 @@ def optimized_detection(logs, T, threshold):
     """
     Optimized sliding window detection with O(n) complexity.
     Uses a deque to efficiently track requests within the time window.
+    Enhanced with burst detection and adaptive scoring.
     """
     # Sort logs by timestamp to ensure proper window sliding
     logs = logs.sort_values("timestamp").reset_index(drop=True)
     window = deque()
     counter = defaultdict(int)
+    burst_counter = defaultdict(int)  # Track burst patterns
     attack_frequency = defaultdict(int)  # Track attack frequency over time
+    last_request_time = defaultdict(float)  # Track last request time for each IP
     attackers = set()
 
     for _, row in logs.iterrows():
@@ -142,20 +145,57 @@ def optimized_detection(logs, T, threshold):
         window.append((timestamp, ip))
         counter[ip] += 1
 
-        # Check if current IP exceeds threshold
+        # Detect burst patterns
+        if ip in last_request_time:
+            time_diff = timestamp - last_request_time[ip]
+            if time_diff < T/10:  # If requests are coming in very quickly
+                burst_counter[ip] += 1
+        last_request_time[ip] = timestamp
+
+        # Enhanced detection logic
+        is_attacker = False
+        
+        # Check basic threshold
         if counter[ip] > threshold:
+            is_attacker = True
+        
+        # Check burst pattern
+        if burst_counter[ip] > threshold/2:  # Lower threshold for burst detection
+            is_attacker = True
+        
+        # Check request rate
+        if len(window) > 0:
+            window_start = window[0][0]
+            time_span = timestamp - window_start
+            if time_span > 0:  # Avoid division by zero
+                request_rate = counter[ip] / time_span
+                if request_rate > threshold/T:  # Requests per second exceeds threshold
+                    is_attacker = True
+
+        if is_attacker:
             attackers.add(ip)
             attack_frequency[ip] += 1
 
     # Apply weighted scoring for more accurate detection
-    # IPs that exceeded the threshold multiple times are more likely to be attackers
-    scored_attackers = sorted([(ip, attack_frequency[ip]) for ip in attackers], 
-                           key=lambda x: x[1], reverse=True)
+    scored_attackers = []
+    for ip in attackers:
+        score = 0
+        # Base score from frequency
+        score += attack_frequency[ip] * 2
+        # Burst pattern score
+        score += burst_counter[ip]
+        # Request rate score
+        if ip in counter:
+            score += counter[ip] / threshold
+        scored_attackers.append((ip, score))
+
+    # Sort by score and filter
+    scored_attackers.sort(key=lambda x: x[1], reverse=True)
     
-    # Filter out potential false positives (IPs that barely exceeded the threshold)
-    if len(scored_attackers) > 0:
+    # Adaptive threshold based on the highest score
+    if scored_attackers:
         max_score = scored_attackers[0][1]
-        min_score_threshold = max(1, max_score / 5)  # Adaptive threshold
+        min_score_threshold = max(1, max_score / 4)  # More lenient threshold
         return [ip for ip, score in scored_attackers if score >= min_score_threshold]
     
     return [ip for ip in attackers]
