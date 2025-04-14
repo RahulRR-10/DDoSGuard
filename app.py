@@ -14,7 +14,8 @@ import streamlit as st
 import pandas as pd
 import numpy as np
 import matplotlib.pyplot as plt
-from utils import detect_ddos, resolve_ddos, generate_fake_logs, plot_ip_distribution, simulate_attack, get_attack_stats
+from utils import detect_ddos, resolve_ddos, generate_fake_logs, plot_ip_distribution, simulate_attack, get_attack_stats, brute_force_detection, optimized_detection
+import time
 
 # Page configuration
 st.set_page_config(
@@ -447,3 +448,52 @@ if st.session_state['logs'] is not None:
                 
             except Exception as e:
                 st.error(f"Error in detection: {e}")
+
+# Function to compare algorithms
+def compare_algorithms(logs, T, threshold):
+    # Measure execution time for Brute Force
+    start_brute = time.time()
+    brute_attackers = brute_force_detection(logs, T, threshold)
+    brute_time = time.time() - start_brute
+
+    # Measure execution time for Optimized Sliding Window
+    start_opt = time.time()
+    opt_attackers = optimized_detection(logs, T, threshold)
+    opt_time = time.time() - start_opt
+
+    return brute_time, opt_time, len(brute_attackers), len(opt_attackers)
+
+# Streamlit UI
+st.title("DDoS Detection Comparison")
+
+# User inputs for parameters
+T = st.slider("Time Window (seconds)", 5, 120, 30, key="time_window_slider")
+threshold = st.slider("Threshold Requests", 1, 100, 20, key="threshold_slider")
+
+# Button to run comparison
+if st.button("Compare Algorithms"):
+    # Check if logs are loaded
+    if st.session_state['logs'] is None:
+        st.error("Please load or generate logs before comparing algorithms.")
+    else:
+        logs = st.session_state['logs']
+        brute_time, opt_time, brute_count, opt_count = compare_algorithms(logs, T, threshold)
+
+        # Display results
+        st.write(f"Brute Force Detected Attackers: {brute_count} in {brute_time:.2f} seconds")
+        st.write(f"Optimized Sliding Window Detected Attackers: {opt_count} in {opt_time:.2f} seconds")
+
+        # Plotting the results
+        labels = ['Brute Force', 'Optimized Sliding Window']
+        times = [brute_time, opt_time]
+        
+        fig, ax = plt.subplots()
+        ax.bar(labels, times, color=['red', 'blue'])
+        ax.set_ylabel('Execution Time (seconds)')
+        ax.set_title('Algorithm Execution Time Comparison')
+        st.pyplot(fig)
+
+        # Display Big O Notation
+        st.write("### Time Complexity:")
+        st.write("- Brute Force: O(n²) - Compares every log entry with every other entry.")
+        st.write("- Optimized Sliding Window: O(n) - Efficiently tracks requests within the time window.")
