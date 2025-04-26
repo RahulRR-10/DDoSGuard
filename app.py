@@ -271,8 +271,26 @@ def process_request():
     if is_simulation:
         app.logger.info(f"Processing simulated attack traffic from {ip} {attack_type if attack_type else ''}")
         
-        # Process simulated traffic with higher weight (3x) for better visibility
-        for _ in range(3):
+        # Check if attack simulation is active in the simulator
+        attack_status = attack_simulator.get_attack_status()
+        if not attack_status['is_running']:
+            app.logger.warning("Received simulated attack traffic but no attack is marked as running in the simulator")
+            # Auto-fix the running status if needed
+            if attack_simulator.current_attack and attack_simulator.current_attack.is_active:
+                attack_simulator.is_running = True
+                app.logger.info("Auto-corrected attack simulator running status")
+        
+        # Process simulated traffic with higher weight based on intensity
+        # Use the simulator's intensity setting to determine weight
+        intensity = 5  # Default intensity
+        if attack_status['is_running'] and attack_status['intensity']:
+            intensity = attack_status['intensity']
+        
+        # Weight factor: 1-3 requests for low intensity, 3-5 for medium, 5-8 for high
+        weight = max(1, min(8, int(intensity * 0.8)))
+        
+        # Process the request multiple times based on weight
+        for _ in range(weight):
             traffic_profiler.process_request(ip, path, method)
             
         # Get updated metrics
@@ -280,13 +298,15 @@ def process_request():
         
         # Boost anomaly scores for simulated traffic to improve detection
         anomaly_score = anomaly_detector.detect_anomalies(metrics)
-        # Ensure simulated attacks trigger detection by setting a minimum score
-        anomaly_score = max(anomaly_score, 0.45)
+        
+        # Scale anomaly score based on intensity (higher intensity = higher score)
+        intensity_factor = min(1.0, max(0.5, intensity / 10.0))
+        anomaly_score = max(anomaly_score, 0.4 + (intensity_factor * 0.4))
         
         # Apply aggressive mitigation for simulated attacks
         action = mitigation_system.mitigate(ip, anomaly_score)
         
-        app.logger.info(f"Simulated attack processing: IP={ip}, Score={anomaly_score:.2f}, Action={action}")
+        app.logger.info(f"Simulated attack: IP={ip}, Type={attack_type}, Intensity={intensity}, Score={anomaly_score:.2f}, Action={action}")
     else:
         # Normal traffic processing
         traffic_profiler.process_request(ip, path, method)
@@ -315,7 +335,8 @@ def process_request():
         'method': method,
         'anomaly_score': anomaly_score,
         'action': action,
-        'is_simulation': is_simulation
+        'is_simulation': is_simulation,
+        'attack_type': attack_type
     })
 
 # Create database tables

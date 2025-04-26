@@ -1,1 +1,173 @@
-null
+{% extends "base.html" %}
+
+{% block title %}Attack Reports - SentinelDDoS{% endblock %}
+
+{% block custom_head %}
+<!-- Include Chart.js with time scale plugin -->
+<script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/moment@2.29.1/min/moment.min.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/chartjs-adapter-moment@1.0.0/dist/chartjs-adapter-moment.min.js"></script>
+{% endblock %}
+
+{% block content %}
+<div class="container-fluid py-4">
+    <div class="row mb-4">
+        <div class="col">
+            <h1 class="h3"><i class="fas fa-chart-line me-2"></i>Attack Reports</h1>
+            <p class="text-muted">
+                Historical analysis of attack simulations and system response metrics.
+            </p>
+        </div>
+    </div>
+
+    <!-- Attack History Section -->
+    <div class="row mb-4">
+        <div class="col-12">
+            <div class="card border-0 shadow-sm">
+                <div class="card-header bg-transparent border-bottom-0">
+                    <h5 class="mb-0"><i class="fas fa-history me-2"></i>Attack History</h5>
+                </div>
+                <div class="card-body">
+                    <div class="table-responsive">
+                        <table id="attackHistoryTable" class="table table-hover">
+                            <thead>
+                                <tr>
+                                    <th>ID</th>
+                                    <th>Attack Type</th>
+                                    <th>Start Time</th>
+                                    <th>End Time</th>
+                                    <th>Duration</th>
+                                    <th>Intensity</th>
+                                    <th>Distribution</th>
+                                </tr>
+                            </thead>
+                            <tbody id="attackHistoryTableBody">
+                                <tr>
+                                    <td colspan="7" class="text-center">Loading attack history...</td>
+                                </tr>
+                            </tbody>
+                        </table>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Charts Section -->
+    <div class="row mb-4">
+        <!-- Attack Types Chart -->
+        <div class="col-md-6 col-lg-3 mb-4">
+            <div class="card border-0 shadow-sm h-100">
+                <div class="card-header bg-transparent border-bottom-0">
+                    <h5 class="mb-0"><i class="fas fa-pie-chart me-2"></i>Attack Types</h5>
+                </div>
+                <div class="card-body d-flex align-items-center">
+                    <div style="height: 260px; width: 100%;">
+                        <canvas id="attackTypesChart"></canvas>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Intensity Chart -->
+        <div class="col-md-6 col-lg-3 mb-4">
+            <div class="card border-0 shadow-sm h-100">
+                <div class="card-header bg-transparent border-bottom-0">
+                    <h5 class="mb-0"><i class="fas fa-thermometer-half me-2"></i>Attack Intensity</h5>
+                </div>
+                <div class="card-body d-flex align-items-center">
+                    <div style="height: 260px; width: 100%;">
+                        <canvas id="intensityChart"></canvas>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Distribution Method Chart -->
+        <div class="col-md-6 col-lg-3 mb-4">
+            <div class="card border-0 shadow-sm h-100">
+                <div class="card-header bg-transparent border-bottom-0">
+                    <h5 class="mb-0"><i class="fas fa-globe me-2"></i>Distribution Methods</h5>
+                </div>
+                <div class="card-body d-flex align-items-center">
+                    <div style="height: 260px; width: 100%;">
+                        <canvas id="distributionChart"></canvas>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Timeline Chart -->
+        <div class="col-md-6 col-lg-3 mb-4">
+            <div class="card border-0 shadow-sm h-100">
+                <div class="card-header bg-transparent border-bottom-0">
+                    <h5 class="mb-0"><i class="fas fa-clock me-2"></i>Attack Timeline</h5>
+                </div>
+                <div class="card-body d-flex align-items-center">
+                    <div style="height: 260px; width: 100%;">
+                        <canvas id="timelineChart"></canvas>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- System Response Metrics Section -->
+    <div class="row mb-4">
+        <div class="col-12">
+            <div class="card border-0 shadow-sm">
+                <div class="card-header bg-transparent border-bottom-0">
+                    <h5 class="mb-0"><i class="fas fa-shield-alt me-2"></i>Defense Effectiveness</h5>
+                </div>
+                <div class="card-body">
+                    <div class="row">
+                        <div class="col-md-4 mb-4">
+                            <div class="card border-0 shadow-sm">
+                                <div class="card-body text-center">
+                                    <h6 class="text-muted mb-3">Detection Rate</h6>
+                                    <div class="display-4 mb-3">
+                                        <span id="detectionRate">99.8%</span>
+                                    </div>
+                                    <p class="text-muted small">
+                                        Percentage of attacks successfully detected by the system.
+                                    </p>
+                                </div>
+                            </div>
+                        </div>
+                        <div class="col-md-4 mb-4">
+                            <div class="card border-0 shadow-sm">
+                                <div class="card-body text-center">
+                                    <h6 class="text-muted mb-3">Mitigation Success</h6>
+                                    <div class="display-4 mb-3">
+                                        <span id="mitigationSuccess">97.2%</span>
+                                    </div>
+                                    <p class="text-muted small">
+                                        Percentage of attacks successfully mitigated after detection.
+                                    </p>
+                                </div>
+                            </div>
+                        </div>
+                        <div class="col-md-4 mb-4">
+                            <div class="card border-0 shadow-sm">
+                                <div class="card-body text-center">
+                                    <h6 class="text-muted mb-3">Average Response Time</h6>
+                                    <div class="display-4 mb-3">
+                                        <span id="avgResponseTime">0.42s</span>
+                                    </div>
+                                    <p class="text-muted small">
+                                        Average time between detection and mitigation action.
+                                    </p>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}
+
+{% block custom_scripts %}
+<script src="{{ url_for('static', filename='js/reports.js') }}"></script>
+{% endblock %}
