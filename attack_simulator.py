@@ -3,7 +3,7 @@ import random
 import threading
 import time
 import requests
-from datetime import datetime
+from datetime import datetime, timedelta
 from models import AttackLog
 from app import db
 
@@ -114,7 +114,25 @@ class AttackSimulator:
         end_time = start_time + duration
         
         try:
+            # Update the attack log with the duration
+            if self.current_attack:
+                try:
+                    self.current_attack.end_time = datetime.utcnow() + timedelta(seconds=duration)
+                    db.session.commit()
+                    self.logger.info(f"Updated attack log with duration: {duration}s")
+                except Exception as e:
+                    self.logger.error(f"Error updating attack log duration: {str(e)}")
+                    db.session.rollback()
+            
+            # Run the attack
+            attack_iteration = 0
             while time.time() < end_time and not self.stop_event.is_set():
+                attack_iteration += 1
+                # Log every 10 iterations
+                if attack_iteration % 10 == 0:
+                    self.logger.info(f"Attack in progress: iteration {attack_iteration}, {int((time.time() - start_time))}s elapsed")
+                
+                # Call the attack function with the parameters
                 attack_func(intensity, distribution)
                 
                 # Check if we should stop
@@ -126,6 +144,16 @@ class AttackSimulator:
             self.logger.error(f"Error in attack simulation: {str(e)}")
         finally:
             self.is_running = False
+            
+            # Ensure the attack log is properly marked as completed
+            if self.current_attack:
+                try:
+                    self.current_attack.end_time = datetime.utcnow()
+                    self.current_attack.is_active = False
+                    db.session.commit()
+                except Exception as e:
+                    self.logger.error(f"Error finalizing attack log: {str(e)}")
+                    db.session.rollback()
     
     def _generate_ip(self, distribution):
         """

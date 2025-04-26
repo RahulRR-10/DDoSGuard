@@ -401,14 +401,29 @@ function updateAnomalyData(data) {
         const newScores = recentAnomalies.map(anomaly => 
             anomaly.anomaly_score);
             
-        // Check if we have new data by looking at the latest timestamp
-        const latestTimestamp = newTimestamps[newTimestamps.length - 1];
-        const existingLastIndex = anomalyData.labels.indexOf(latestTimestamp);
+        // Check if we have new data to add
+        let hasNewData = false;
         
-        if (existingLastIndex === -1) {
-            // Merge with existing data, avoiding duplicates
-            anomalyData.labels = [...anomalyData.labels, ...newTimestamps];
-            anomalyData.scores = [...anomalyData.scores, ...newScores];
+        // We only add data points that we don't already have
+        const timestampsToAdd = [];
+        const scoresToAdd = [];
+        
+        // Check each new timestamp to see if we already have it
+        for (let i = 0; i < newTimestamps.length; i++) {
+            const timestamp = newTimestamps[i];
+            if (anomalyData.labels.indexOf(timestamp) === -1) {
+                hasNewData = true;
+                timestampsToAdd.push(timestamp);
+                scoresToAdd.push(newScores[i]);
+            }
+        }
+        
+        if (hasNewData) {
+            console.log(`Adding ${timestampsToAdd.length} new anomaly data points`);
+            
+            // Add the new data points
+            anomalyData.labels = [...anomalyData.labels, ...timestampsToAdd];
+            anomalyData.scores = [...anomalyData.scores, ...scoresToAdd];
             
             // Keep only the most recent MAX_DATA_POINTS
             if (anomalyData.labels.length > MAX_DATA_POINTS) {
@@ -416,6 +431,28 @@ function updateAnomalyData(data) {
                 anomalyData.labels = anomalyData.labels.slice(removeCount);
                 anomalyData.scores = anomalyData.scores.slice(removeCount);
             }
+            
+            // Sort the data by timestamp to ensure proper ordering
+            const combinedData = anomalyData.labels.map((timestamp, index) => {
+                return { timestamp, score: anomalyData.scores[index] };
+            });
+            
+            combinedData.sort((a, b) => {
+                // Parse timestamps back to Date objects for comparison
+                const timeA = a.timestamp.split(':');
+                const timeB = b.timestamp.split(':');
+                
+                // Compare hours, minutes, seconds
+                for (let i = 0; i < 3; i++) {
+                    if (parseInt(timeA[i]) > parseInt(timeB[i])) return 1;
+                    if (parseInt(timeA[i]) < parseInt(timeB[i])) return -1;
+                }
+                return 0;
+            });
+            
+            // Update our data arrays with sorted values
+            anomalyData.labels = combinedData.map(item => item.timestamp);
+            anomalyData.scores = combinedData.map(item => item.score);
         }
     }
     
@@ -423,6 +460,13 @@ function updateAnomalyData(data) {
     anomalyChart.data.labels = anomalyData.labels;
     anomalyChart.data.datasets[0].data = anomalyData.scores;
     anomalyChart.update();
+    
+    // Update attack intensity visualization
+    // If we have a high anomaly score, get attack status to update intensity indicator
+    const highestScore = Math.max(...anomalyData.scores, 0);
+    if (highestScore > 0.6) {
+        checkAttackSimulationStatus();
+    }
     
     // Update threat level indicator
     updateThreatLevel(recentAnomalies.length > 0 ? recentAnomalies : data);
