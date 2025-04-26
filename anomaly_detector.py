@@ -196,6 +196,25 @@ class AnomalyDetector:
             self.logger.error(f"Error logging anomaly: {str(e)}")
             db.session.rollback()
     
+    def reset(self):
+        """
+        Reset the anomaly detector state to start fresh.
+        This is used when resetting after a simulation ends.
+        """
+        self.logger.info("Resetting anomaly detector state")
+        
+        # Clear histories
+        self.anomaly_history.clear()
+        self.feature_history.clear()
+        
+        # Reset ML model
+        self.isolation_forest = IsolationForest(
+            n_estimators=100,
+            contamination=0.05,
+            random_state=42
+        )
+        self.model_trained = False
+    
     def get_anomalies(self, minutes=30):
         """
         Get historical anomaly records for the specified time period.

@@ -233,9 +233,14 @@ def stop_simulation():
             db.session.commit()
         
         # Reset the traffic profiler's internal state
+        from collections import deque, Counter
         traffic_profiler.request_window = deque()
         traffic_profiler.ip_counter = Counter()
         traffic_profiler.request_count = 0
+        traffic_profiler.metrics_history = []  # Clear metrics history too
+        
+        # Reset the anomaly detector state
+        anomaly_detector.reset()
         
         return jsonify({'status': 'Attack simulation stopped and system reset to normal conditions'})
     
