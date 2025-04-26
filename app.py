@@ -1,5 +1,6 @@
 import os
 import logging
+from datetime import datetime, timedelta
 from flask import Flask, render_template, request, jsonify, redirect, url_for, flash
 from flask_sqlalchemy import SQLAlchemy
 from sqlalchemy.orm import DeclarativeBase
@@ -67,23 +68,70 @@ def settings():
 # API endpoints
 @app.route('/api/traffic/current', methods=['GET'])
 def get_current_traffic():
-    return jsonify(traffic_profiler.get_current_metrics())
+    try:
+        metrics = traffic_profiler.get_current_metrics()
+        app.logger.debug(f"Returning current traffic metrics: {metrics}")
+        return jsonify(metrics)
+    except Exception as e:
+        app.logger.error(f"Error getting current traffic metrics: {str(e)}")
+        # Return empty metrics to prevent frontend errors
+        return jsonify({
+            'timestamp': datetime.utcnow().isoformat(),
+            'requests_per_second': 0,
+            'unique_ips': 0,
+            'entropy_value': 0,
+            'burst_score': 0,
+            'total_requests': 0
+        })
 
 @app.route('/api/traffic/history', methods=['GET'])
 def get_traffic_history():
-    return jsonify(traffic_profiler.get_traffic_history())
+    try:
+        history = traffic_profiler.get_traffic_history()
+        app.logger.debug(f"Returning traffic history with {len(history)} items")
+        return jsonify(history)
+    except Exception as e:
+        app.logger.error(f"Error getting traffic history: {str(e)}")
+        # Return empty history to prevent frontend errors
+        return jsonify([])
 
 @app.route('/api/anomalies', methods=['GET'])
 def get_anomalies():
-    return jsonify(anomaly_detector.get_anomalies())
+    try:
+        anomalies = anomaly_detector.get_anomalies()
+        app.logger.debug(f"Returning {len(anomalies)} anomalies")
+        return jsonify(anomalies)
+    except Exception as e:
+        app.logger.error(f"Error getting anomalies: {str(e)}")
+        # Return empty array to prevent frontend errors
+        return jsonify([])
 
 @app.route('/api/mitigation/status', methods=['GET'])
 def get_mitigation_status():
-    return jsonify(mitigation_system.get_status())
+    try:
+        status = mitigation_system.get_status()
+        app.logger.debug(f"Returning mitigation status: {status}")
+        return jsonify(status)
+    except Exception as e:
+        app.logger.error(f"Error getting mitigation status: {str(e)}")
+        # Return default status to prevent frontend errors
+        return jsonify({
+            'active_mitigations': 0,
+            'recent_actions': [],
+            'rate_limited_ips': 0,
+            'blocked_ips_count': 0
+        })
 
 @app.route('/api/mitigation/blocked', methods=['GET'])
 def get_blocked_ips():
-    return jsonify(mitigation_system.get_blocked_ips())
+    try:
+        blocked = mitigation_system.get_blocked_ips()
+        app.logger.debug(f"Returning {len(blocked)} blocked IPs")
+        return jsonify(blocked)
+    except Exception as e:
+        app.logger.error(f"Error getting blocked IPs: {str(e)}")
+        # Return empty array to prevent frontend errors
+        return jsonify([])
 
 @app.route('/api/simulate/attack', methods=['POST'])
 def simulate_attack():
@@ -108,7 +156,21 @@ def stop_simulation():
 
 @app.route('/api/simulate/status', methods=['GET'])
 def get_attack_status():
-    return jsonify(attack_simulator.get_attack_status())
+    try:
+        status = attack_simulator.get_attack_status()
+        app.logger.debug(f"Returning attack status: {status}")
+        return jsonify(status)
+    except Exception as e:
+        app.logger.error(f"Error getting attack status: {str(e)}")
+        # Return default status to prevent frontend errors
+        return jsonify({
+            'is_running': False,
+            'attack_type': None,
+            'start_time': None,
+            'intensity': None,
+            'distribution': None,
+            'duration': None
+        })
 
 @app.route('/api/settings/update', methods=['POST'])
 def update_settings():
