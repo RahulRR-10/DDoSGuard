@@ -19,17 +19,49 @@ document.addEventListener('DOMContentLoaded', function() {
 });
 
 function loadAttackHistory() {
+    console.log('Fetching attack history data...');
+    
     fetch('/api/simulate/attack/history')
-        .then(response => response.json())
+        .then(response => {
+            if (!response.ok) {
+                throw new Error(`HTTP error! Status: ${response.status}`);
+            }
+            return response.json();
+        })
         .then(data => {
-            updateAttackHistoryTable(data);
-            updateAttackCharts(data);
+            console.log(`Retrieved ${data.length} attack history records`);
+            
+            if (data.length === 0) {
+                // Display helpful message when no attack data is available
+                document.getElementById('attackHistoryTableBody').innerHTML = `
+                    <tr>
+                        <td colspan="7" class="text-center text-muted py-5">
+                            <i class="fas fa-info-circle mb-3 display-4"></i>
+                            <p>No attack simulations have been run yet.</p>
+                            <p>Go to the Attack Simulator tab to run attack simulations.</p>
+                        </td>
+                    </tr>
+                `;
+                // Initialize empty charts
+                initEmptyCharts();
+            } else {
+                // Update the table and charts with the data
+                updateAttackHistoryTable(data);
+                updateAttackCharts(data);
+            }
         })
         .catch(error => {
             console.error('Error fetching attack history:', error);
             // Show error message
-            document.getElementById('attackHistoryTable').innerHTML = 
-                '<div class="alert alert-danger">Error loading attack history.</div>';
+            document.getElementById('attackHistoryTableBody').innerHTML = `
+                <tr>
+                    <td colspan="7" class="text-center text-danger py-5">
+                        <i class="fas fa-exclamation-triangle mb-3 display-4"></i>
+                        <p>Error loading attack history data.</p>
+                        <p class="small">${error.message || 'Unknown error'}</p>
+                    </td>
+                </tr>
+            `;
         });
 }
 
@@ -460,6 +492,162 @@ function initCharts() {
     if (!attackTypesCtx || !intensityCtx || !distributionCtx || !timelineCtx) {
         console.error('One or more chart canvases not found');
     }
+}
+
+function initEmptyCharts() {
+    // Initialize charts with empty/placeholder data
+    
+    // Attack Types Chart - empty pie chart
+    const attackTypesCtx = document.getElementById('attackTypesChart').getContext('2d');
+    if (attackTypesCtx) {
+        if (window.attackTypesChart) {
+            window.attackTypesChart.destroy();
+        }
+        window.attackTypesChart = new Chart(attackTypesCtx, {
+            type: 'pie',
+            data: {
+                labels: ['No Data'],
+                datasets: [{
+                    data: [1],
+                    backgroundColor: ['rgba(200, 200, 200, 0.5)'],
+                    borderWidth: 1
+                }]
+            },
+            options: {
+                responsive: true,
+                maintainAspectRatio: false,
+                plugins: {
+                    legend: {
+                        position: 'right',
+                    },
+                    title: {
+                        display: true,
+                        text: 'Attack Types Distribution'
+                    }
+                }
+            }
+        });
+    }
+    
+    // Intensity Chart - empty bar chart
+    const intensityCtx = document.getElementById('intensityChart').getContext('2d');
+    if (intensityCtx) {
+        if (window.intensityChart) {
+            window.intensityChart.destroy();
+        }
+        window.intensityChart = new Chart(intensityCtx, {
+            type: 'bar',
+            data: {
+                labels: ['No Data'],
+                datasets: [{
+                    label: 'Intensity Level',
+                    data: [0],
+                    backgroundColor: ['rgba(200, 200, 200, 0.5)'],
+                    borderWidth: 1
+                }]
+            },
+            options: {
+                responsive: true,
+                maintainAspectRatio: false,
+                plugins: {
+                    title: {
+                        display: true,
+                        text: 'Attack Intensity Comparison'
+                    }
+                },
+                scales: {
+                    y: {
+                        beginAtZero: true
+                    }
+                }
+            }
+        });
+    }
+    
+    // Distribution Chart - empty polar area chart
+    const distributionCtx = document.getElementById('distributionChart').getContext('2d');
+    if (distributionCtx) {
+        if (window.distributionChart) {
+            window.distributionChart.destroy();
+        }
+        window.distributionChart = new Chart(distributionCtx, {
+            type: 'polarArea',
+            data: {
+                labels: ['No Data'],
+                datasets: [{
+                    data: [1],
+                    backgroundColor: ['rgba(200, 200, 200, 0.5)'],
+                    borderWidth: 1
+                }]
+            },
+            options: {
+                responsive: true,
+                maintainAspectRatio: false,
+                plugins: {
+                    legend: {
+                        position: 'right',
+                    },
+                    title: {
+                        display: true,
+                        text: 'Attack Distribution Methods'
+                    }
+                }
+            }
+        });
+    }
+    
+    // Timeline Chart - empty line chart
+    const timelineCtx = document.getElementById('timelineChart').getContext('2d');
+    if (timelineCtx) {
+        if (window.timelineChart) {
+            window.timelineChart.destroy();
+        }
+        window.timelineChart = new Chart(timelineCtx, {
+            type: 'line',
+            data: {
+                datasets: [{
+                    label: 'No Data',
+                    data: [],
+                    borderColor: 'rgba(200, 200, 200, 0.5)',
+                    fill: false
+                }]
+            },
+            options: {
+                responsive: true,
+                maintainAspectRatio: false,
+                scales: {
+                    x: {
+                        type: 'time',
+                        time: {
+                            unit: 'minute',
+                        },
+                        title: {
+                            display: true,
+                            text: 'Time'
+                        }
+                    },
+                    y: {
+                        beginAtZero: true,
+                        title: {
+                            display: true,
+                            text: 'Intensity'
+                        }
+                    }
+                },
+                plugins: {
+                    title: {
+                        display: true,
+                        text: 'Attack Timeline'
+                    }
+                }
+            }
+        });
+    }
+    
+    // Clear stats
+    document.getElementById('detectionRate').textContent = '-';
+    document.getElementById('mitigationSuccess').textContent = '-';
+    document.getElementById('avgResponseTime').textContent = '-';
 }
 
 function refreshData() {

@@ -158,7 +158,7 @@ def stop_simulation():
         mitigation_system.cleanup()
         app.logger.info("Cleaned up simulation blocks after stopping attack")
         
-        # Clean up historical anomalies from the simulation
+        # Cleanup and regenerate normal traffic pattern
         with app.app_context():
             from models import AnomalyLog, TrafficMetrics, TrafficLog
             from datetime import datetime, timedelta
@@ -197,14 +197,14 @@ def stop_simulation():
                 for log in recent_logs:
                     db.session.delete(log)
                     
-            # Create new baseline normal traffic
+            # Create new baseline normal traffic data for dashboard
             normal_rps = random.uniform(1.5, 4.0)
             normal_unique_ips = random.randint(10, 30)
             normal_entropy = random.uniform(3.0, 4.0)
             normal_burst = random.uniform(0.01, 0.1)
             
             # Add a few normal traffic metrics to establish a baseline
-            for i in range(10):
+            for i in range(30):  # Increased from 10 to 30 for better graph population
                 # Slight random variations in normal traffic
                 rps_variation = random.uniform(0.8, 1.2)
                 unique_ips_variation = random.uniform(0.9, 1.1)
@@ -212,7 +212,7 @@ def stop_simulation():
                 burst_variation = random.uniform(0.9, 1.1)
                 
                 # Create metrics slightly in the past (to establish timeline)
-                timestamp = now - timedelta(seconds=(10-i)*30)
+                timestamp = now - timedelta(seconds=(30-i)*30)
                 
                 metric = TrafficMetrics(
                     timestamp=timestamp,
@@ -222,19 +222,33 @@ def stop_simulation():
                     burst_score=normal_burst * burst_variation
                 )
                 db.session.add(metric)
+                
+                # Also add some minimal anomaly data to ensure dashboard graphs have data
+                if i % 3 == 0:  # Add anomaly data every 3rd point
+                    anomaly = AnomalyLog(
+                        timestamp=timestamp,
+                        anomaly_score=random.uniform(0.01, 0.15),  # Low scores for normal traffic
+                        entropy_value=normal_entropy * entropy_variation,
+                        burst_score=normal_burst * burst_variation,
+                        unique_ips=int(normal_unique_ips * unique_ips_variation),
+                        total_requests=int((normal_rps * rps_variation) * 60)
+                    )
+                    db.session.add(anomaly)
             
             # Commit all changes
             db.session.commit()
         
-        # Reset the traffic profiler's internal state
+        # Reset the traffic profiler's internal state but maintain some history
         from collections import deque, Counter
         traffic_profiler.request_window = deque()
         traffic_profiler.ip_counter = Counter()
         traffic_profiler.request_count = 0
-        traffic_profiler.metrics_history = []  # Clear metrics history too
         
         # Reset the anomaly detector state
         anomaly_detector.reset()
+        
+        # Force traffic profiler to reload metrics from database
+        traffic_profiler.get_traffic_history(minutes=30)
         
         return jsonify({'status': 'Attack simulation stopped and system reset to normal conditions'})
     
