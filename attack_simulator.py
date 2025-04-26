@@ -174,15 +174,22 @@ class AttackSimulator:
                 from app import process_request, app
                 with app.test_request_context(
                     path='/process_request',
-                    headers={'X-Forwarded-For': ip}
+                    headers={
+                        'X-Forwarded-For': ip,
+                        'X-Attack-Type': 'flooding'  # Mark as attack traffic
+                    }
                 ):
                     process_request()
+                
+                # Log every 10th request to avoid overwhelming the logs
+                if _ % 10 == 0:
+                    self.logger.info(f"Sent flooding attack request from {ip} ({_+1}/{num_requests})")
             except Exception as e:
                 self.logger.error(f"Error sending simulated request: {str(e)}")
                 pass
             
-            # Small delay between requests
-            time.sleep(0.01)
+            # Small delay between requests (using a smaller delay for flooding attacks)
+            time.sleep(0.005)
     
     def _pulsing_attack(self, intensity, distribution):
         """
@@ -207,9 +214,16 @@ class AttackSimulator:
                 from app import process_request, app
                 with app.test_request_context(
                     path='/process_request',
-                    headers={'X-Forwarded-For': ip}
+                    headers={
+                        'X-Forwarded-For': ip,
+                        'X-Attack-Type': 'pulsing'  # Mark as pulsing attack traffic
+                    }
                 ):
                     process_request()
+                
+                # Log every 20th request to avoid overwhelming the logs
+                if _ % 20 == 0:
+                    self.logger.info(f"Sent pulsing attack request from {ip} ({_+1}/{burst_requests})")
             except Exception as e:
                 self.logger.error(f"Error sending simulated request: {str(e)}")
                 pass
@@ -244,10 +258,13 @@ class AttackSimulator:
                     path='/process_request',
                     headers={
                         'X-Forwarded-For': ip,
-                        'Connection': 'keep-alive'
+                        'Connection': 'keep-alive',
+                        'X-Attack-Type': 'slowloris'  # Mark as slowloris attack
                     }
                 ):
                     process_request()
+                
+                self.logger.info(f"Sent slowloris attack request from {ip} ({_+1}/{num_connections})")
             except Exception as e:
                 self.logger.error(f"Error sending simulated request: {str(e)}")
                 pass
@@ -317,14 +334,22 @@ class AttackSimulator:
                 from app import process_request, app
                 with app.test_request_context(
                     path=path,
-                    headers={'X-Forwarded-For': ip}
+                    headers={
+                        'X-Forwarded-For': ip,
+                        'X-Attack-Type': 'distributed'  # Mark as distributed attack
+                    }
                 ):
                     process_request()
+                
+                # Log periodically
+                if _ % 10 == 0:
+                    self.logger.info(f"Sent distributed attack request from {ip} to {path} ({_+1}/{num_requests})")
             except Exception as e:
                 self.logger.error(f"Error sending simulated request: {str(e)}")
                 pass
             
-            time.sleep(0.02)
+            # Distributed attacks often have slightly variable timing
+            time.sleep(0.01 + random.random() * 0.03)
     
     def get_attack_status(self):
         """
@@ -333,13 +358,58 @@ class AttackSimulator:
         Returns:
             dict: Attack status information
         """
-        return {
-            'is_running': self.is_running,
-            'attack_type': self.current_attack.attack_type if self.current_attack else None,
-            'start_time': self.current_attack.start_time if self.current_attack else None,
-            'intensity': self.current_attack.intensity if self.current_attack else None,
-            'distribution': self.current_attack.distribution if self.current_attack else None
-        }
+        try:
+            # First check if attack is running based on our thread
+            if not self.is_running or not self.current_attack:
+                return {
+                    'is_running': False,
+                    'attack_type': None,
+                    'start_time': None,
+                    'intensity': None,
+                    'distribution': None,
+                    'duration': None
+                }
+            
+            # Get latest status from the database to avoid detached instance errors
+            from app import db
+            from models import AttackLog
+            
+            # Refresh the attack log from database
+            attack_id = self.current_attack.id
+            attack_log = AttackLog.query.filter_by(id=attack_id).first()
+            
+            if not attack_log:
+                self.is_running = False
+                self.current_attack = None
+                return {
+                    'is_running': False,
+                    'attack_type': None,
+                    'start_time': None,
+                    'intensity': None,
+                    'distribution': None,
+                    'duration': None
+                }
+            
+            # Use refreshed attack log data
+            return {
+                'is_running': self.is_running,
+                'attack_type': attack_log.attack_type,
+                'start_time': attack_log.start_time,
+                'intensity': attack_log.intensity,
+                'distribution': attack_log.distribution,
+                'duration': 60  # Default duration
+            }
+        except Exception as e:
+            self.logger.error(f"Error getting attack status: {str(e)}")
+            # Return safe defaults
+            return {
+                'is_running': self.is_running,
+                'attack_type': 'unknown',
+                'start_time': None,
+                'intensity': 5,
+                'distribution': 'random',
+                'duration': 60
+            }
     
     def get_attack_types(self):
         """
