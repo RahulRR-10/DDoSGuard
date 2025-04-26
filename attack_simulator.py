@@ -170,12 +170,15 @@ class AttackSimulator:
             
             # Send request to the monitoring endpoint
             try:
-                requests.get(
-                    'http://localhost:5000/process_request',
-                    headers={'X-Forwarded-For': ip},
-                    timeout=0.5
-                )
-            except requests.exceptions.RequestException:
+                # Use direct function call instead of HTTP request to avoid network issues
+                from app import process_request, app
+                with app.test_request_context(
+                    path='/process_request',
+                    headers={'X-Forwarded-For': ip}
+                ):
+                    process_request()
+            except Exception as e:
+                self.logger.error(f"Error sending simulated request: {str(e)}")
                 pass
             
             # Small delay between requests
@@ -200,12 +203,15 @@ class AttackSimulator:
             ip = self._generate_ip(distribution)
             
             try:
-                requests.get(
-                    'http://localhost:5000/process_request',
-                    headers={'X-Forwarded-For': ip},
-                    timeout=0.5
-                )
-            except requests.exceptions.RequestException:
+                # Use direct function call instead of HTTP request to avoid network issues
+                from app import process_request, app
+                with app.test_request_context(
+                    path='/process_request',
+                    headers={'X-Forwarded-For': ip}
+                ):
+                    process_request()
+            except Exception as e:
+                self.logger.error(f"Error sending simulated request: {str(e)}")
                 pass
             
             time.sleep(0.005)  # Very small delay during burst
@@ -232,18 +238,18 @@ class AttackSimulator:
             
             # Simulate partial request
             try:
-                session = requests.Session()
-                session.get(
-                    'http://localhost:5000/process_request',
+                # Use direct function call instead of HTTP request to avoid network issues
+                from app import process_request, app
+                with app.test_request_context(
+                    path='/process_request',
                     headers={
                         'X-Forwarded-For': ip,
                         'Connection': 'keep-alive'
-                    },
-                    timeout=0.5,
-                    stream=True  # Keep connection open
-                )
-                # Don't read the response or close the connection
-            except requests.exceptions.RequestException:
+                    }
+                ):
+                    process_request()
+            except Exception as e:
+                self.logger.error(f"Error sending simulated request: {str(e)}")
                 pass
         
         # Keep connections open for a while
@@ -268,15 +274,18 @@ class AttackSimulator:
             
             # Simulate SYN flood by sending request with SYN header
             try:
-                requests.get(
-                    'http://localhost:5000/process_request',
+                # Use direct function call instead of HTTP request to avoid network issues
+                from app import process_request, app
+                with app.test_request_context(
+                    path='/process_request',
                     headers={
                         'X-Forwarded-For': ip,
                         'X-Attack-Type': 'syn_flood'  # Custom header for simulation
-                    },
-                    timeout=0.1
-                )
-            except requests.exceptions.RequestException:
+                    }
+                ):
+                    process_request()
+            except Exception as e:
+                self.logger.error(f"Error sending simulated request: {str(e)}")
                 pass
             
             time.sleep(0.01)
@@ -304,12 +313,15 @@ class AttackSimulator:
             path = random.choice(paths)
             
             try:
-                requests.get(
-                    f'http://localhost:5000{path}',
-                    headers={'X-Forwarded-For': ip},
-                    timeout=0.5
-                )
-            except requests.exceptions.RequestException:
+                # Use direct function call instead of HTTP request to avoid network issues
+                from app import process_request, app
+                with app.test_request_context(
+                    path=path,
+                    headers={'X-Forwarded-For': ip}
+                ):
+                    process_request()
+            except Exception as e:
+                self.logger.error(f"Error sending simulated request: {str(e)}")
                 pass
             
             time.sleep(0.02)

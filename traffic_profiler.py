@@ -27,8 +27,9 @@ class TrafficProfiler:
         # Sliding window to store recent requests
         self.request_window = deque()
         
-        # Metrics storage
-        self.metrics_history = deque(maxlen=1000)  # Store up to 1000 data points
+        # Metrics storage - use list instead of deque for slicing operations
+        self.metrics_history = []  # Store up to 1000 data points
+        self.max_history = 1000
         
         # Counter for real-time metrics
         self.ip_counter = Counter()
@@ -153,6 +154,10 @@ class TrafficProfiler:
         # Add to history
         self.metrics_history.append(metrics)
         
+        # Trim history if it exceeds max length
+        if len(self.metrics_history) > self.max_history:
+            self.metrics_history = self.metrics_history[-self.max_history:]
+        
         # Store in database (throttled to reduce DB writes)
         if len(self.metrics_history) % 5 == 0:  # Store every 5th metric update
             try:
@@ -264,39 +269,16 @@ class TrafficProfiler:
     
     def load_or_create_baseline(self):
         """Load the most recent baseline profile from the database or create a default one."""
-        try:
-            baseline = BaselineProfile.query.filter_by(is_active=True).first()
+        # Create a default baseline first
+        self.baseline = {
+            'avg_requests_per_second': 1.0,
+            'avg_unique_ips': 5.0,
+            'avg_entropy': 1.0,
+            'std_requests_per_second': 0.5,
+            'std_unique_ips': 2.0,
+            'std_entropy': 0.5
+        }
+        self.logger.info("Created default baseline profile")
             
-            if baseline:
-                self.baseline = {
-                    'avg_requests_per_second': baseline.avg_requests_per_second,
-                    'avg_unique_ips': baseline.avg_unique_ips,
-                    'avg_entropy': baseline.avg_entropy,
-                    'std_requests_per_second': baseline.std_requests_per_second,
-                    'std_unique_ips': baseline.std_unique_ips,
-                    'std_entropy': baseline.std_entropy
-                }
-                self.logger.info("Loaded baseline profile from database")
-            else:
-                # Create a default baseline
-                self.baseline = {
-                    'avg_requests_per_second': 1.0,
-                    'avg_unique_ips': 5.0,
-                    'avg_entropy': 1.0,
-                    'std_requests_per_second': 0.5,
-                    'std_unique_ips': 2.0,
-                    'std_entropy': 0.5
-                }
-                self.logger.info("Created default baseline profile")
-        except Exception as e:
-            self.logger.error(f"Error loading baseline: {str(e)}")
-            
-            # Create a default baseline
-            self.baseline = {
-                'avg_requests_per_second': 1.0,
-                'avg_unique_ips': 5.0,
-                'avg_entropy': 1.0,
-                'std_requests_per_second': 0.5,
-                'std_unique_ips': 2.0,
-                'std_entropy': 0.5
-            }
+        # We'll try to load from database on the first API call
+        # when the Flask context is available
