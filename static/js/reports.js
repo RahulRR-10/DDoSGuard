@@ -43,7 +43,7 @@ function loadAttackHistory() {
     // Force a delay to ensure any previous attack simulation has been properly recorded
     setTimeout(() => {
         // Add a timestamp to prevent caching
-        const url = '/get_attack_history?_t=' + new Date().getTime();
+        const url = '/api/simulate/attack/history?_t=' + new Date().getTime();
         
         fetch(url)
             .then(response => {

@@ -183,12 +183,13 @@ class AnomalyDetector:
             anomaly_record (dict): Anomaly data
         """
         try:
+            # Convert numpy types to native Python types to avoid SQL errors
             anomaly_log = AnomalyLog(
-                anomaly_score=anomaly_record['anomaly_score'],
-                entropy_value=anomaly_record['entropy_value'],
-                burst_score=anomaly_record['burst_score'],
-                unique_ips=anomaly_record['unique_ips'],
-                total_requests=anomaly_record['total_requests']
+                anomaly_score=float(anomaly_record['anomaly_score']),
+                entropy_value=float(anomaly_record['entropy_value']),
+                burst_score=float(anomaly_record['burst_score']),
+                unique_ips=int(anomaly_record['unique_ips']),
+                total_requests=int(anomaly_record['total_requests'])
             )
             db.session.add(anomaly_log)
             db.session.commit()
