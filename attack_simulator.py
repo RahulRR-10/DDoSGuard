@@ -54,16 +54,22 @@ class AttackSimulator:
             intensity (int): Attack intensity level (1-10)
             distribution (str): IP distribution pattern ('random', 'subnet', 'fixed')
         """
-        self.logger.debug(f"[DEBUG] start_attack called with is_running={self.is_running}")
-        if self.is_running:
-            self.logger.info("Attack already in progress, stopping current attack")
-            self.stop_attack()
+        self.logger.info(f"Starting attack: type={attack_type}, duration={duration}s, intensity={intensity}, distribution={distribution}")
         
-        self.logger.info(f"Starting {attack_type} attack simulation (duration: {duration}s, intensity: {intensity})")
+        # First check for an existing attack
+        if self.is_running:
+            self.logger.info("Attack already in progress, stopping current attack first")
+            self.stop_attack()
+            # Small delay to ensure the previous attack is fully stopped
+            time.sleep(0.5)
+        
+        # Clear any old stop events and make sure we have a clean one
+        if hasattr(self, 'stop_event'):
+            del self.stop_event
+        self.stop_event = threading.Event()
         
         # Set basic status even before DB operations
         self.is_running = True
-        self.logger.debug(f"[DEBUG] is_running set to True in start_attack")
         self.attack_type = attack_type
         self.attack_intensity = intensity
         self.attack_distribution = distribution
@@ -481,8 +487,19 @@ class AttackSimulator:
             dict: Attack status information
         """
         try:
+            # Add detailed logging to help diagnose issues
+            self.logger.info(f"get_attack_status called, is_running={self.is_running}, attack_thread alive={self.attack_thread and self.attack_thread.is_alive()}")
+            
             # First check if attack is running based on our thread
-            if not self.is_running:
+            thread_alive = self.attack_thread and self.attack_thread.is_alive()
+            actual_running = self.is_running and thread_alive
+            
+            if not actual_running:
+                # If the thread is not alive but is_running is True, we have an inconsistent state
+                if self.is_running and not thread_alive and self.attack_thread:
+                    self.logger.warning("Inconsistent state: is_running=True but thread not alive, resetting is_running")
+                    self.is_running = False
+                
                 # Still return last attack parameters even when not running
                 # This helps maintain consistency between page navigation
                 return {

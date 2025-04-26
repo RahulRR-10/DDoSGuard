@@ -215,7 +215,7 @@ function startAttack() {
         console.log('Attack simulation started:', data);
         
         // Update UI
-        updateSimulationStatus(true, attackType, duration, intensity, distribution);
+        updateSimulationStatus(true, attackType, duration, intensity, distribution, data);
         
         // Show alert with dashboard link
         showAlert(`
@@ -297,7 +297,8 @@ function checkAttackStatus() {
                     data.attack_type,
                     data.duration,
                     data.intensity,
-                    data.distribution
+                    data.distribution,
+                    data // Pass the full data object for access to start_time
                 );
             } else {
                 // If the attack is not running, clear session storage
@@ -314,7 +315,9 @@ function checkAttackStatus() {
         });
 }
 
-function updateSimulationStatus(isRunning, attackType = '', duration = 0, intensity = 0, distribution = '') {
+function updateSimulationStatus(isRunning, attackType = '', duration = 0, intensity = 0, distribution = '', data = null) {
+    console.log('updateSimulationStatus called:', {isRunning, attackType, duration, intensity, distribution, data});
+    
     const statusContainer = document.getElementById('attackStatusContainer');
     const statusBadge = document.getElementById('attackStatusBadge');
     const attackForm = document.getElementById('attackForm');
@@ -367,17 +370,30 @@ function updateSimulationStatus(isRunning, attackType = '', duration = 0, intens
             
             // If timer is not running, start it
             if (!attackTimer) {
-                // Check if we have a saved start time from session storage
-                if (savedAttackStartTime && sessionStorage.getItem('attackRunning') === 'true') {
-                    // Use the saved start time to ensure timer continuity between page loads
+                console.log('No active timer, starting new timer');
+                
+                // Get the most accurate start time - prefer server value if available
+                if (data && data.start_time) {
+                    console.log('Using server start time:', data.start_time);
+                    attackStartTime = new Date(data.start_time);
+                } else if (savedAttackStartTime && sessionStorage.getItem('attackRunning') === 'true') {
+                    console.log('Using saved start time:', savedAttackStartTime);
                     attackStartTime = new Date(savedAttackStartTime);
                 } else {
-                    // Otherwise use current time as start
+                    console.log('Using current time as start time');
                     attackStartTime = new Date();
                 }
                 
+                // Debug current timer state
+                console.log('Timer state before starting:', {
+                    startTime: attackStartTime,
+                    duration: attackDuration,
+                });
+                
                 // Start the timer
                 startAttackTimer();
+            } else {
+                console.log('Timer already running, not restarting');
             }
         }
     } else {
