@@ -540,16 +540,175 @@ function updateTimelineChart(timelineData) {
 }
 
 function initCharts() {
-    // The charts will be initialized when data is loaded
-    // Create empty chart containers
-    const attackTypesCtx = document.getElementById('attackTypesChart').getContext('2d');
-    const intensityCtx = document.getElementById('intensityChart').getContext('2d');
-    const distributionCtx = document.getElementById('distributionChart').getContext('2d');
-    const timelineCtx = document.getElementById('timelineChart').getContext('2d');
+    console.log('Initializing charts...');
     
-    // If any canvas is missing, log an error
-    if (!attackTypesCtx || !intensityCtx || !distributionCtx || !timelineCtx) {
-        console.error('One or more chart canvases not found');
+    try {
+        // Make sure all chart canvases exist
+        const attackTypesCanvas = document.getElementById('attackTypesChart');
+        const intensityCanvas = document.getElementById('intensityChart');
+        const distributionCanvas = document.getElementById('distributionChart');
+        const timelineCanvas = document.getElementById('timelineChart');
+        
+        // Log error if any canvas is missing, but continue with those that exist
+        if (!attackTypesCanvas || !intensityCanvas || !distributionCanvas || !timelineCanvas) {
+            console.error('One or more chart canvases not found');
+            console.log('Available canvases:', {
+                attackTypes: !!attackTypesCanvas,
+                intensity: !!intensityCanvas,
+                distribution: !!distributionCanvas,
+                timeline: !!timelineCanvas
+            });
+        }
+        
+        // Initialize with empty data to avoid errors
+        // This ensures the chart objects exist before we try to update them
+        
+        // 1. Attack Types Chart
+        if (attackTypesCanvas && !window.attackTypesChart) {
+            const ctx = attackTypesCanvas.getContext('2d');
+            window.attackTypesChart = new Chart(ctx, {
+                type: 'pie',
+                data: {
+                    labels: ['No Data'],
+                    datasets: [{
+                        data: [1],
+                        backgroundColor: ['rgba(200, 200, 200, 0.7)'],
+                        borderWidth: 1
+                    }]
+                },
+                options: {
+                    responsive: true,
+                    maintainAspectRatio: false,
+                    plugins: {
+                        legend: {
+                            position: 'right',
+                        },
+                        title: {
+                            display: true,
+                            text: 'Attack Types Distribution'
+                        }
+                    }
+                }
+            });
+        }
+        
+        // 2. Intensity Chart
+        if (intensityCanvas && !window.intensityChart) {
+            const ctx = intensityCanvas.getContext('2d');
+            window.intensityChart = new Chart(ctx, {
+                type: 'bar',
+                data: {
+                    labels: ['No Data'],
+                    datasets: [{
+                        label: 'Intensity Level',
+                        data: [0],
+                        backgroundColor: ['rgba(200, 200, 200, 0.7)'],
+                        borderWidth: 1
+                    }]
+                },
+                options: {
+                    indexAxis: 'y',
+                    responsive: true,
+                    maintainAspectRatio: false,
+                    scales: {
+                        x: {
+                            beginAtZero: true,
+                            max: 10,
+                            title: { display: true, text: 'Intensity Level (1-10)' }
+                        },
+                        y: {
+                            title: { display: true, text: 'Attack ID' }
+                        }
+                    },
+                    plugins: {
+                        legend: { display: false },
+                        title: { display: true, text: 'Attack Intensity Comparison' }
+                    }
+                }
+            });
+        }
+        
+        // 3. Distribution Chart
+        if (distributionCanvas && !window.distributionChart) {
+            const ctx = distributionCanvas.getContext('2d');
+            window.distributionChart = new Chart(ctx, {
+                type: 'polarArea',
+                data: {
+                    labels: ['No Data'],
+                    datasets: [{
+                        data: [1],
+                        backgroundColor: ['rgba(200, 200, 200, 0.7)'],
+                        borderWidth: 1
+                    }]
+                },
+                options: {
+                    responsive: true,
+                    maintainAspectRatio: false,
+                    plugins: {
+                        legend: { position: 'right' },
+                        title: { display: true, text: 'Attack Distribution Methods' }
+                    }
+                }
+            });
+        }
+        
+        // 4. Timeline Chart
+        if (timelineCanvas && !window.timelineChart) {
+            const ctx = timelineCanvas.getContext('2d');
+            const now = new Date();
+            window.timelineChart = new Chart(ctx, {
+                type: 'line',
+                data: {
+                    datasets: [{
+                        label: 'No Attack Data',
+                        data: [
+                            { x: new Date(now.getTime() - 30*60000), y: 0 },
+                            { x: now, y: 0 }
+                        ],
+                        borderColor: 'rgba(200, 200, 200, 0.7)',
+                        backgroundColor: 'rgba(200, 200, 200, 0.1)',
+                        borderWidth: 2,
+                        pointRadius: 0
+                    }]
+                },
+                options: {
+                    responsive: true,
+                    maintainAspectRatio: false,
+                    scales: {
+                        x: {
+                            type: 'time',
+                            time: {
+                                unit: 'minute',
+                                displayFormats: {
+                                    minute: 'HH:mm'
+                                }
+                            },
+                            title: { display: true, text: 'Time' }
+                        },
+                        y: {
+                            beginAtZero: true,
+                            max: 10,
+                            title: { display: true, text: 'Intensity' }
+                        }
+                    },
+                    plugins: {
+                        tooltip: {
+                            callbacks: {
+                                label: function(context) {
+                                    return context.dataset.label;
+                                }
+                            }
+                        },
+                        title: { display: true, text: 'Attack Timeline' }
+                    }
+                }
+            });
+        }
+        
+        console.log('Charts initialized successfully');
+        
+    } catch (error) {
+        console.error('Error initializing charts:', error);
     }
 }
 
@@ -710,7 +869,20 @@ function initEmptyCharts() {
 }
 
 function refreshData() {
-    loadAttackHistory();
+    console.log('Refreshing report data...');
+    try {
+        // Make sure charts are initialized
+        if (!window.attackTypesChart || !window.intensityChart || 
+            !window.distributionChart || !window.timelineChart) {
+            console.log('Charts not initialized, initializing now...');
+            initCharts();
+        }
+        
+        // Load fresh attack history with cache-busting
+        loadAttackHistory();
+    } catch (error) {
+        console.error('Error during data refresh:', error);
+    }
 }
 
 // Utility Functions
