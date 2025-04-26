@@ -44,6 +44,17 @@ document.addEventListener('DOMContentLoaded', function() {
         detailsContainer.parentNode.insertBefore(timerContainer, detailsContainer.nextSibling);
     }
     
+    // Restore timer state if we have session data
+    if (savedAttackStartTime && sessionStorage.getItem('attackRunning') === 'true') {
+        // Convert ISO start time to Date
+        attackStartTime = new Date(savedAttackStartTime);
+        
+        // Get duration from session storage
+        if (savedAttackDuration) {
+            attackDuration = parseInt(savedAttackDuration);
+        }
+    }
+    
     // Check if an attack is currently running
     checkAttackStatus();
     
@@ -253,14 +264,24 @@ function stopAttack() {
 }
 
 function checkAttackStatus() {
-    // Create a status check function
-    // For now, we'll just assume no attack is running initially
-    // In a real implementation, you would fetch the current status from the server
-    
+    // Fetch the current attack status from the server
     fetch('/api/simulate/status')
         .then(response => response.json())
         .then(data => {
             if (data.is_running) {
+                // Store attack details in session storage for persistence between page loads
+                sessionStorage.setItem('attackRunning', 'true');
+                sessionStorage.setItem('attackType', data.attack_type);
+                sessionStorage.setItem('attackDuration', data.duration);
+                sessionStorage.setItem('attackIntensity', data.intensity);
+                sessionStorage.setItem('attackDistribution', data.distribution);
+                
+                // If we have a start time in the API response, store it
+                if (data.start_time) {
+                    sessionStorage.setItem('attackStartTime', data.start_time);
+                }
+                
+                // Update UI to show attack is running
                 updateSimulationStatus(
                     true,
                     data.attack_type,
@@ -269,6 +290,12 @@ function checkAttackStatus() {
                     data.distribution
                 );
             } else {
+                // If the attack is not running, clear session storage
+                sessionStorage.removeItem('attackRunning');
+                
+                // Don't clear other values as they might be needed for displaying
+                // historical data about the last attack that ran
+                
                 updateSimulationStatus(false);
             }
         })
@@ -330,7 +357,16 @@ function updateSimulationStatus(isRunning, attackType = '', duration = 0, intens
             
             // If timer is not running, start it
             if (!attackTimer) {
-                attackStartTime = new Date();
+                // Check if we have a saved start time from session storage
+                if (savedAttackStartTime && sessionStorage.getItem('attackRunning') === 'true') {
+                    // Use the saved start time to ensure timer continuity between page loads
+                    attackStartTime = new Date(savedAttackStartTime);
+                } else {
+                    // Otherwise use current time as start
+                    attackStartTime = new Date();
+                }
+                
+                // Start the timer
                 startAttackTimer();
             }
         }
