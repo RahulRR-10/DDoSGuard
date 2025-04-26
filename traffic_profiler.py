@@ -206,6 +206,7 @@ class TrafficProfiler:
         Returns:
             list: List of traffic metric dictionaries
         """
+        # First check if we have in-memory data
         # Convert deque to list for serialization
         history = list(self.metrics_history)
         
@@ -213,6 +214,41 @@ class TrafficProfiler:
         if history and 'timestamp' in history[0]:
             cutoff_time = datetime.utcnow() - timedelta(minutes=minutes)
             history = [m for m in history if m['timestamp'] > cutoff_time]
+        
+        # If we don't have any in-memory history or it's very small, try to load from database
+        if not history or len(history) < 10:
+            try:
+                # Query the database for historical traffic metrics
+                cutoff_time = datetime.utcnow() - timedelta(minutes=minutes)
+                db_metrics = TrafficMetrics.query.filter(
+                    TrafficMetrics.timestamp > cutoff_time
+                ).order_by(TrafficMetrics.timestamp).all()
+                
+                # Convert DB metrics to dictionary format
+                db_history = []
+                for metric in db_metrics:
+                    db_history.append({
+                        'timestamp': metric.timestamp,
+                        'requests_per_second': metric.requests_per_second,
+                        'unique_ips': metric.unique_ips,
+                        'entropy_value': metric.entropy_value,
+                        'burst_score': metric.burst_score,
+                        'total_requests': metric.requests_per_second * 60  # Estimate
+                    })
+                
+                # If we have database history, use it (it's more persistent)
+                if db_history:
+                    self.logger.info(f"Loaded {len(db_history)} traffic metrics from database")
+                    # Update in-memory history for future calls
+                    self.metrics_history.extend(db_history)
+                    # Keep only the most recent in memory
+                    if len(self.metrics_history) > self.max_history:
+                        self.metrics_history = self.metrics_history[-self.max_history:]
+                    # Return the database history
+                    return db_history
+            except Exception as e:
+                self.logger.error(f"Error loading traffic history from database: {str(e)}")
+                # If there's an error, fall back to in-memory history
         
         return history
     
