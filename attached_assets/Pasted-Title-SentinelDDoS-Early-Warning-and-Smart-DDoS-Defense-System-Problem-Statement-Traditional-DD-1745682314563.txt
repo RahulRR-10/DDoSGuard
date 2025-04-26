@@ -1,0 +1,120 @@
+Title:
+
+SentinelDDoS: Early Warning and Smart DDoS Defense System
+Problem Statement:
+
+Traditional DDoS detection systems react after the attack impact is already visible (website slowdown, service outage).
+Modern attackers use stealthy, low-rate, or bursty attacks to bypass simple rate-based detection.
+There is a need for a smarter, earlier, and more adaptive DDoS detection and mitigation system.
+Project Goal:
+
+Design and build a system that can:
+
+    Profile normal network traffic behavior (baseline model)
+
+    Detect anomalies early using entropy, burst detection, and machine learning (e.g., Isolation Forest)
+
+    Simulate realistic, adaptive DDoS attacks for testing
+
+    Visualize traffic behavior and anomalies in real-time
+
+    Apply smart mitigation strategies (rate limiting, quarantining IPs, priority-based blocking)
+
+Main Features:
+1. 📈 Traffic Profiler
+
+    Continuously monitors live incoming network traffic.
+
+    Extracts metrics such as:
+
+        Requests per IP per second
+
+        Unique IPs appearing per time window
+
+        Entropy of source IP distribution
+
+        Burstiness score (variance in traffic)
+
+    Builds a baseline profile of normal traffic.
+
+2. 🚨 Early Anomaly Detection Engine
+
+    Uses a combination of:
+
+        Sliding window statistics
+
+        Entropy thresholding
+
+        Burst detection algorithms
+
+        Machine Learning anomaly detection (e.g., Isolation Forest, Local Outlier Factor)
+
+    Flags potential attacks before severe traffic spikes.
+
+3. 🛡 Smart Mitigation Layer
+
+    Applies different strategies based on the severity of anomaly score:
+
+        Light anomalies → Rate limit suspicious IPs.
+
+        Medium anomalies → Challenge (e.g., CAPTCHA simulation).
+
+        Severe anomalies → Quarantine IPs before blocking.
+
+    Uses a Priority Queue to block or rate-limit based on severity.
+
+4. ⚡ Attack Simulation Lab
+
+    Simulate realistic, multi-vector DDoS attacks:
+
+        Distributed Flooding
+
+        Pulsing Attacks
+
+        Slowloris (slow HTTP headers)
+
+        SYN Floods
+
+        Combination attacks
+
+    Allow parameter configuration: number of attackers, request rates, wave patterns, stealth settings.
+
+5. 📊 Visualization Dashboard
+
+    Built with Streamlit (or a similar tool).
+
+    Displays real-time:
+
+        Traffic graphs (requests over time)
+
+        Entropy graphs
+
+        Top IPs by request count
+
+        Anomaly scores over time
+
+        Status of mitigation actions
+
+    (Optional) World map showing attacker IP distribution.
+
+6. 🧪 Benchmarking Module
+
+    Compare different detection algorithms:
+
+        Entropy-Based
+
+        Sliding Window Thresholds
+
+        Machine Learning models
+
+    Display performance graphs (Detection Time vs Attack Type, False Positive Rate, etc.)
+
+Technical Requirements:
+Area	Details
+Programming Language	Python
+ML Libraries	scikit-learn (for Isolation Forest, LOF)
+Data Handling	pandas, numpy
+Visualization	Streamlit + Plotly
+Attack Simulation	Python threading / asyncio
+Real-time Server (Optional)	FastAPI or Flask (for live traffic simulation)
+Packaging	Modular structure, clean code, Dockerized version optional
