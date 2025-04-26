@@ -1,0 +1,170 @@
+{% extends 'base.html' %}
+
+{% block title %}Attack Simulator - SentinelDDoS{% endblock %}
+
+{% block header %}Attack Simulation Lab{% endblock %}
+
+{% block content %}
+<div class="container-fluid">
+    <!-- Alert container for messages -->
+    <div id="alertContainer" class="mb-4"></div>
+    
+    <!-- Attack Status Card -->
+    <div class="row mb-4">
+        <div class="col-md-12">
+            <div class="card" id="attackStatusContainer" style="display: none;">
+                <div class="card-header d-flex justify-content-between align-items-center">
+                    <h5 class="mb-0">
+                        <i class="fas fa-bolt me-2"></i>
+                        Attack Simulator Status
+                    </h5>
+                    <span id="attackStatusBadge" class="badge bg-secondary">IDLE</span>
+                </div>
+                <div class="card-body">
+                    <div id="attackDetailsContainer" style="display: none;">
+                        <h6 class="mb-3">Attack Details:</h6>
+                        <div id="attackDetails"></div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+    
+    <!-- Attack Simulator Form -->
+    <div class="row mb-4">
+        <div class="col-md-12">
+            <div class="card">
+                <div class="card-header">
+                    <h5 class="mb-0">
+                        <i class="fas fa-sliders-h me-2"></i>
+                        Attack Configuration
+                    </h5>
+                </div>
+                <div class="card-body">
+                    <form id="attackForm">
+                        <div class="row mb-4">
+                            <!-- Attack Type -->
+                            <div class="col-md-6 mb-3">
+                                <label for="attackType" class="form-label">Attack Type</label>
+                                <select class="form-select" id="attackType" required>
+                                    <!-- Options will be populated by JavaScript -->
+                                </select>
+                                <div class="form-text" id="attackTypeDescription"></div>
+                            </div>
+                            
+                            <!-- IP Distribution -->
+                            <div class="col-md-6 mb-3">
+                                <label for="distribution" class="form-label">IP Distribution</label>
+                                <select class="form-select" id="distribution" required>
+                                    <!-- Options will be populated by JavaScript -->
+                                </select>
+                                <div class="form-text" id="distributionDescription"></div>
+                            </div>
+                        </div>
+                        
+                        <div class="row mb-4">
+                            <!-- Duration Slider -->
+                            <div class="col-md-6 mb-3">
+                                <label for="duration" class="form-label">Duration (seconds)</label>
+                                <input type="range" class="form-range" id="duration" min="10" max="300" step="10" value="60">
+                                <div class="d-flex justify-content-between">
+                                    <span class="form-text">10s</span>
+                                    <span class="form-text fw-bold" id="durationValue">60 seconds</span>
+                                    <span class="form-text">300s</span>
+                                </div>
+                            </div>
+                            
+                            <!-- Intensity Slider -->
+                            <div class="col-md-6 mb-3">
+                                <label for="intensity" class="form-label">Attack Intensity</label>
+                                <input type="range" class="form-range" id="intensity" min="1" max="10" step="1" value="5">
+                                <div class="progress mb-2">
+                                    <div id="intensityIndicator" class="progress-bar bg-info" role="progressbar" style="width: 50%" aria-valuenow="5" aria-valuemin="1" aria-valuemax="10"></div>
+                                </div>
+                                <div class="d-flex justify-content-between">
+                                    <span class="form-text">Low (1)</span>
+                                    <span class="form-text fw-bold" id="intensityValue">5</span>
+                                    <span class="form-text">High (10)</span>
+                                </div>
+                            </div>
+                        </div>
+                        
+                        <div class="row">
+                            <div class="col-md-12">
+                                <div class="alert alert-info">
+                                    <i class="fas fa-info-circle me-2"></i>
+                                    This simulator generates realistic attack traffic to test the detection and mitigation system.
+                                    It's designed for educational and testing purposes only.
+                                </div>
+                            </div>
+                        </div>
+                        
+                        <div class="d-flex justify-content-end mt-3">
+                            <button type="button" id="stopAttackBtn" class="btn btn-danger me-2" disabled>Stop Attack</button>
+                            <button type="button" id="startAttackBtn" class="btn btn-primary">Start Attack</button>
+                        </div>
+                    </form>
+                </div>
+            </div>
+        </div>
+    </div>
+    
+    <!-- Attack Vector Documentation -->
+    <div class="row mb-4">
+        <div class="col-md-12">
+            <div class="card">
+                <div class="card-header">
+                    <h5 class="mb-0">
+                        <i class="fas fa-info-circle me-2"></i>
+                        Attack Vectors Information
+                    </h5>
+                </div>
+                <div class="card-body">
+                    <div class="table-responsive">
+                        <table class="table">
+                            <thead>
+                                <tr>
+                                    <th>Attack Type</th>
+                                    <th>Description</th>
+                                    <th>Detection Challenges</th>
+                                </tr>
+                            </thead>
+                            <tbody>
+                                <tr>
+                                    <td><strong>Distributed Flooding</strong></td>
+                                    <td>High volume of traffic from multiple source IPs targeting the server</td>
+                                    <td>Can be detected with rate limiting but may overwhelm before detection</td>
+                                </tr>
+                                <tr>
+                                    <td><strong>Pulsing Attack</strong></td>
+                                    <td>Traffic comes in waves or bursts, with periods of normal activity in between</td>
+                                    <td>Harder to detect with simple thresholds; requires burst detection</td>
+                                </tr>
+                                <tr>
+                                    <td><strong>Slowloris</strong></td>
+                                    <td>Keeps connections open by sending partial HTTP requests</td>
+                                    <td>Low traffic rate but exhausts connection pools</td>
+                                </tr>
+                                <tr>
+                                    <td><strong>SYN Flood</strong></td>
+                                    <td>TCP SYN packets flood that never completes the handshake</td>
+                                    <td>Can bypass application-level detection</td>
+                                </tr>
+                                <tr>
+                                    <td><strong>Mixed Distribution</strong></td>
+                                    <td>Combination of attack vectors from many distributed sources</td>
+                                    <td>Complex pattern requiring multiple detection methods</td>
+                                </tr>
+                            </tbody>
+                        </table>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}
+
+{% block scripts %}
+<script src="{{ url_for('static', filename='js/simulator.js') }}"></script>
+{% endblock %}

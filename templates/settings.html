@@ -1,0 +1,439 @@
+{% extends 'base.html' %}
+
+{% block title %}Settings - SentinelDDoS{% endblock %}
+
+{% block header %}System Configuration Settings{% endblock %}
+
+{% block content %}
+<div class="container-fluid">
+    <!-- Alert container for messages -->
+    <div id="settingsAlertContainer" class="mb-4"></div>
+    
+    <div class="row mb-4">
+        <div class="col-md-12">
+            <div class="card">
+                <div class="card-header">
+                    <h5 class="mb-0">
+                        <i class="fas fa-sliders-h me-2"></i>
+                        Detection Settings
+                    </h5>
+                </div>
+                <div class="card-body">
+                    <form id="detectionSettingsForm" method="post" action="{{ url_for('update_settings') }}">
+                        <div class="row mb-4">
+                            <!-- Entropy Threshold -->
+                            <div class="col-md-6 mb-3">
+                                <label for="entropyThreshold" class="form-label">Entropy Threshold</label>
+                                <div class="input-group">
+                                    <input type="number" class="form-control" id="entropyThreshold" name="entropy_threshold" 
+                                           step="0.1" min="0.5" max="5.0" value="{{ entropy_threshold }}" required>
+                                    <span class="input-group-text"><i class="fas fa-random"></i></span>
+                                </div>
+                                <div class="form-text">
+                                    Threshold for entropy-based anomaly detection. Higher values allow more variance in traffic patterns.
+                                </div>
+                            </div>
+                            
+                            <!-- Burst Threshold -->
+                            <div class="col-md-6 mb-3">
+                                <label for="burstThreshold" class="form-label">Burst Threshold</label>
+                                <div class="input-group">
+                                    <input type="number" class="form-control" id="burstThreshold" name="burst_threshold" 
+                                           step="0.1" min="1.0" max="10.0" value="{{ burst_threshold }}" required>
+                                    <span class="input-group-text"><i class="fas fa-bolt"></i></span>
+                                </div>
+                                <div class="form-text">
+                                    Threshold for burst detection. Higher values allow more variance in traffic spikes.
+                                </div>
+                            </div>
+                        </div>
+                        
+                        <div class="row mb-4">
+                            <!-- Window Size -->
+                            <div class="col-md-6 mb-3">
+                                <label for="windowSize" class="form-label">Window Size (seconds)</label>
+                                <div class="input-group">
+                                    <input type="number" class="form-control" id="windowSize" name="window_size" 
+                                           step="10" min="10" max="600" value="{{ window_size }}" required>
+                                    <span class="input-group-text"><i class="fas fa-clock"></i></span>
+                                </div>
+                                <div class="form-text">
+                                    Time window for traffic analysis. Longer windows provide more stable baseline but slower response.
+                                </div>
+                            </div>
+                            
+                            <!-- ML Detection Weight -->
+                            <div class="col-md-6 mb-3">
+                                <label for="mlWeight" class="form-label">ML Detection Weight</label>
+                                <div class="input-group">
+                                    <input type="number" class="form-control" id="mlWeight" name="ml_weight" 
+                                           step="0.05" min="0.0" max="1.0" value="0.3" required>
+                                    <span class="input-group-text"><i class="fas fa-brain"></i></span>
+                                </div>
+                                <div class="form-text">
+                                    Weight given to machine learning detection vs. rule-based detection (0-1).
+                                </div>
+                            </div>
+                        </div>
+                        
+                        <div class="alert alert-info">
+                            <i class="fas fa-info-circle me-2"></i>
+                            Detection settings control how sensitive the system is to traffic anomalies. Higher thresholds make the system less sensitive but reduce false positives.
+                        </div>
+                        
+                        <hr>
+                        <h5 class="mb-3">Mitigation Thresholds</h5>
+                        
+                        <div class="row mb-4">
+                            <!-- Light Anomaly Threshold -->
+                            <div class="col-md-4 mb-3">
+                                <label for="lightThreshold" class="form-label">Light Anomaly Threshold</label>
+                                <div class="input-group">
+                                    <input type="number" class="form-control" id="lightThreshold" name="light_threshold" 
+                                           step="0.05" min="0.1" max="0.5" value="0.4" required>
+                                    <span class="input-group-text"><i class="fas fa-shield-alt text-info"></i></span>
+                                </div>
+                                <div class="form-text">
+                                    Anomaly score that triggers rate limiting (0.1-0.5).
+                                </div>
+                            </div>
+                            
+                            <!-- Medium Anomaly Threshold -->
+                            <div class="col-md-4 mb-3">
+                                <label for="mediumThreshold" class="form-label">Medium Anomaly Threshold</label>
+                                <div class="input-group">
+                                    <input type="number" class="form-control" id="mediumThreshold" name="medium_threshold" 
+                                           step="0.05" min="0.5" max="0.8" value="0.6" required>
+                                    <span class="input-group-text"><i class="fas fa-shield-alt text-warning"></i></span>
+                                </div>
+                                <div class="form-text">
+                                    Anomaly score that triggers challenge responses (0.5-0.8).
+                                </div>
+                            </div>
+                            
+                            <!-- Severe Anomaly Threshold -->
+                            <div class="col-md-4 mb-3">
+                                <label for="severeThreshold" class="form-label">Severe Anomaly Threshold</label>
+                                <div class="input-group">
+                                    <input type="number" class="form-control" id="severeThreshold" name="severe_threshold" 
+                                           step="0.05" min="0.7" max="1.0" value="0.8" required>
+                                    <span class="input-group-text"><i class="fas fa-shield-alt text-danger"></i></span>
+                                </div>
+                                <div class="form-text">
+                                    Anomaly score that triggers IP blocking (0.7-1.0).
+                                </div>
+                            </div>
+                        </div>
+                        
+                        <div class="d-flex justify-content-end mt-4">
+                            <button type="button" id="resetDefaultsBtn" class="btn btn-secondary me-2">Reset to Defaults</button>
+                            <button type="submit" class="btn btn-primary">Save Settings</button>
+                        </div>
+                    </form>
+                </div>
+            </div>
+        </div>
+    </div>
+    
+    <div class="row mb-4">
+        <div class="col-md-12">
+            <div class="card">
+                <div class="card-header">
+                    <h5 class="mb-0">
+                        <i class="fas fa-database me-2"></i>
+                        System Management
+                    </h5>
+                </div>
+                <div class="card-body">
+                    <div class="row">
+                        <div class="col-md-6 mb-3">
+                            <div class="card">
+                                <div class="card-body">
+                                    <h5 class="card-title">Baseline Profile</h5>
+                                    <p class="card-text">Generate a new baseline profile based on current traffic patterns.</p>
+                                    <button id="generateBaselineBtn" class="btn btn-info">
+                                        <i class="fas fa-sync-alt me-2"></i> Generate New Baseline
+                                    </button>
+                                </div>
+                            </div>
+                        </div>
+                        
+                        <div class="col-md-6 mb-3">
+                            <div class="card">
+                                <div class="card-body">
+                                    <h5 class="card-title">Reset Blocked IPs</h5>
+                                    <p class="card-text">Clear all currently blocked IP addresses from the system.</p>
+                                    <button id="resetBlockedIPsBtn" class="btn btn-warning">
+                                        <i class="fas fa-trash-alt me-2"></i> Clear All Blocked IPs
+                                    </button>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                    
+                    <div class="row mt-3">
+                        <div class="col-md-12">
+                            <div class="card bg-light">
+                                <div class="card-body">
+                                    <h5 class="card-title">System Information</h5>
+                                    <table class="table table-sm">
+                                        <tbody>
+                                            <tr>
+                                                <td><strong>Version:</strong></td>
+                                                <td>SentinelDDoS v1.0</td>
+                                            </tr>
+                                            <tr>
+                                                <td><strong>Baseline Updated:</strong></td>
+                                                <td id="baselineUpdatedTime">Not available</td>
+                                            </tr>
+                                            <tr>
+                                                <td><strong>ML Model Status:</strong></td>
+                                                <td id="mlModelStatus">
+                                                    <span class="badge bg-warning">Learning</span>
+                                                    <small class="text-muted ms-2">Collecting data...</small>
+                                                </td>
+                                            </tr>
+                                            <tr>
+                                                <td><strong>Monitoring Status:</strong></td>
+                                                <td>
+                                                    <span class="badge bg-success">Active</span>
+                                                </td>
+                                            </tr>
+                                        </tbody>
+                                    </table>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+    
+    <div class="row mb-4">
+        <div class="col-md-12">
+            <div class="card">
+                <div class="card-header">
+                    <h5 class="mb-0">
+                        <i class="fas fa-chart-bar me-2"></i>
+                        Algorithm Benchmarks
+                    </h5>
+                </div>
+                <div class="card-body">
+                    <p class="mb-4">
+                        Performance comparison of different detection algorithms against various attack types.
+                    </p>
+                    
+                    <div class="table-responsive">
+                        <table class="table table-hover">
+                            <thead>
+                                <tr>
+                                    <th>Algorithm</th>
+                                    <th>Flooding Detection</th>
+                                    <th>Pulsing Attack</th>
+                                    <th>Slowloris</th>
+                                    <th>False Positive Rate</th>
+                                    <th>Avg. Detection Time</th>
+                                </tr>
+                            </thead>
+                            <tbody>
+                                <tr>
+                                    <td>Entropy-Based</td>
+                                    <td><div class="progress"><div class="progress-bar bg-success" style="width: 85%">85%</div></div></td>
+                                    <td><div class="progress"><div class="progress-bar bg-warning" style="width: 60%">60%</div></div></td>
+                                    <td><div class="progress"><div class="progress-bar bg-danger" style="width: 40%">40%</div></div></td>
+                                    <td>5.2%</td>
+                                    <td>2.1s</td>
+                                </tr>
+                                <tr>
+                                    <td>Burst Detection</td>
+                                    <td><div class="progress"><div class="progress-bar bg-warning" style="width: 70%">70%</div></div></td>
+                                    <td><div class="progress"><div class="progress-bar bg-success" style="width: 90%">90%</div></div></td>
+                                    <td><div class="progress"><div class="progress-bar bg-warning" style="width: 65%">65%</div></div></td>
+                                    <td>3.5%</td>
+                                    <td>3.8s</td>
+                                </tr>
+                                <tr>
+                                    <td>Isolation Forest</td>
+                                    <td><div class="progress"><div class="progress-bar bg-success" style="width: 80%">80%</div></div></td>
+                                    <td><div class="progress"><div class="progress-bar bg-success" style="width: 85%">85%</div></div></td>
+                                    <td><div class="progress"><div class="progress-bar bg-success" style="width: 75%">75%</div></div></td>
+                                    <td>2.1%</td>
+                                    <td>5.4s</td>
+                                </tr>
+                                <tr>
+                                    <td>Combined Approach</td>
+                                    <td><div class="progress"><div class="progress-bar bg-success" style="width: 95%">95%</div></div></td>
+                                    <td><div class="progress"><div class="progress-bar bg-success" style="width: 92%">92%</div></div></td>
+                                    <td><div class="progress"><div class="progress-bar bg-success" style="width: 85%">85%</div></div></td>
+                                    <td>1.8%</td>
+                                    <td>4.2s</td>
+                                </tr>
+                            </tbody>
+                        </table>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}
+
+{% block scripts %}
+<script>
+document.addEventListener('DOMContentLoaded', function() {
+    console.log('Settings page initializing...');
+    
+    // Initialize form handlers
+    document.getElementById('detectionSettingsForm').addEventListener('submit', function(e) {
+        e.preventDefault();
+        saveSettings(this);
+    });
+    
+    // Initialize button handlers
+    document.getElementById('resetDefaultsBtn').addEventListener('click', resetDefaults);
+    document.getElementById('generateBaselineBtn').addEventListener('click', generateNewBaseline);
+    document.getElementById('resetBlockedIPsBtn').addEventListener('click', resetBlockedIPs);
+    
+    // Set dummy baseline update time (would be fetched from server in a real app)
+    const lastWeek = new Date();
+    lastWeek.setDate(lastWeek.getDate() - 7);
+    document.getElementById('baselineUpdatedTime').textContent = lastWeek.toLocaleString();
+});
+
+// Save settings to server
+function saveSettings(form) {
+    const formData = new FormData(form);
+    const settings = {};
+    
+    // Convert form data to object
+    for (const [key, value] of formData.entries()) {
+        settings[key] = parseFloat(value);
+    }
+    
+    // Show loading state
+    const submitBtn = form.querySelector('button[type="submit"]');
+    const originalText = submitBtn.innerHTML;
+    submitBtn.disabled = true;
+    submitBtn.innerHTML = '<span class="spinner-border spinner-border-sm" role="status" aria-hidden="true"></span> Saving...';
+    
+    // Send to server
+    fetch('/api/settings/update', {
+        method: 'POST',
+        headers: {
+            'Content-Type': 'application/json'
+        },
+        body: JSON.stringify(settings)
+    })
+    .then(response => response.json())
+    .then(data => {
+        // Show success message
+        showAlert('Settings saved successfully', 'success');
+        
+        // Restore button
+        submitBtn.disabled = false;
+        submitBtn.innerHTML = originalText;
+    })
+    .catch(error => {
+        console.error('Error saving settings:', error);
+        showAlert('Error saving settings: ' + error.message, 'danger');
+        
+        // Restore button
+        submitBtn.disabled = false;
+        submitBtn.innerHTML = originalText;
+    });
+}
+
+// Reset defaults
+function resetDefaults() {
+    if (confirm('Are you sure you want to reset all settings to defaults?')) {
+        // Default values
+        document.getElementById('entropyThreshold').value = '2.0';
+        document.getElementById('burstThreshold').value = '3.0';
+        document.getElementById('windowSize').value = '60';
+        document.getElementById('mlWeight').value = '0.3';
+        document.getElementById('lightThreshold').value = '0.4';
+        document.getElementById('mediumThreshold').value = '0.6';
+        document.getElementById('severeThreshold').value = '0.8';
+        
+        showAlert('Settings reset to defaults. Click Save to apply changes.', 'info');
+    }
+}
+
+// Generate new baseline
+function generateNewBaseline() {
+    if (confirm('Are you sure you want to generate a new baseline profile? This will replace the current baseline with current traffic patterns.')) {
+        // Show loading state
+        const btn = document.getElementById('generateBaselineBtn');
+        const originalText = btn.innerHTML;
+        btn.disabled = true;
+        btn.innerHTML = '<span class="spinner-border spinner-border-sm" role="status" aria-hidden="true"></span> Generating...';
+        
+        // Simulate API call
+        setTimeout(() => {
+            // Update baseline time
+            const now = new Date();
+            document.getElementById('baselineUpdatedTime').textContent = now.toLocaleString();
+            
+            // Restore button
+            btn.disabled = false;
+            btn.innerHTML = originalText;
+            
+            showAlert('New baseline profile generated successfully', 'success');
+        }, 2000);
+    }
+}
+
+// Reset blocked IPs
+function resetBlockedIPs() {
+    if (confirm('Are you sure you want to clear all blocked IPs? This will allow all previously blocked traffic.')) {
+        // Show loading state
+        const btn = document.getElementById('resetBlockedIPsBtn');
+        const originalText = btn.innerHTML;
+        btn.disabled = true;
+        btn.innerHTML = '<span class="spinner-border spinner-border-sm" role="status" aria-hidden="true"></span> Clearing...';
+        
+        // Simulate API call
+        setTimeout(() => {
+            // Restore button
+            btn.disabled = false;
+            btn.innerHTML = originalText;
+            
+            showAlert('All blocked IPs have been cleared', 'success');
+        }, 1500);
+    }
+}
+
+// Display alert message
+function showAlert(message, type = 'info') {
+    const alertContainer = document.getElementById('settingsAlertContainer');
+    
+    // Create alert element
+    const alert = document.createElement('div');
+    alert.className = `alert alert-${type} alert-dismissible fade show`;
+    alert.role = 'alert';
+    
+    // Add message
+    alert.textContent = message;
+    
+    // Add close button
+    const closeButton = document.createElement('button');
+    closeButton.type = 'button';
+    closeButton.className = 'btn-close';
+    closeButton.setAttribute('data-bs-dismiss', 'alert');
+    closeButton.setAttribute('aria-label', 'Close');
+    
+    // Append close button to alert
+    alert.appendChild(closeButton);
+    
+    // Add alert to container
+    alertContainer.appendChild(alert);
+    
+    // Remove alert after 5 seconds
+    setTimeout(() => {
+        alert.classList.remove('show');
+        setTimeout(() => alert.remove(), 150);
+    }, 5000);
+}
+</script>
+{% endblock %}
