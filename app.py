@@ -65,6 +65,10 @@ def settings():
                            burst_threshold=anomaly_detector.burst_threshold,
                            window_size=traffic_profiler.window_size)
 
+@app.route('/reports')
+def reports():
+    return render_template('reports.html')
+
 # API endpoints
 @app.route('/api/traffic/current', methods=['GET'])
 def get_current_traffic():
@@ -171,6 +175,45 @@ def get_attack_status():
             'distribution': None,
             'duration': None
         })
+        
+@app.route('/api/simulate/attack/history', methods=['GET'])
+def get_attack_history():
+    """Get history of past attacks for the reports page"""
+    try:
+        from models import AttackLog
+        
+        # Query completed attacks
+        completed_attacks = AttackLog.query.filter(
+            AttackLog.is_active == False,
+            AttackLog.end_time != None
+        ).order_by(AttackLog.start_time.desc()).limit(10).all()
+        
+        # Query active attacks
+        active_attacks = AttackLog.query.filter(
+            AttackLog.is_active == True
+        ).order_by(AttackLog.start_time.desc()).all()
+        
+        # Combine and format results
+        attacks = active_attacks + completed_attacks
+        
+        result = []
+        for attack in attacks:
+            result.append({
+                'id': attack.id,
+                'start_time': attack.start_time,
+                'end_time': attack.end_time,
+                'attack_type': attack.attack_type,
+                'intensity': attack.intensity,
+                'distribution': attack.distribution,
+                'is_active': attack.is_active
+            })
+            
+        app.logger.debug(f"Returning {len(result)} attack history records")
+        return jsonify(result)
+        
+    except Exception as e:
+        app.logger.error(f"Error getting attack history: {str(e)}")
+        return jsonify([])
 
 @app.route('/api/settings/update', methods=['POST'])
 def update_settings():
