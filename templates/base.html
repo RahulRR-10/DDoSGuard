@@ -190,6 +190,22 @@
             <main class="col-md-9 ms-sm-auto col-lg-10 px-md-4">
                 <div class="d-flex justify-content-between flex-wrap flex-md-nowrap align-items-center pt-3 pb-2 mb-3 border-bottom">
                     <h1 class="h2">{% block header %}{% endblock %}</h1>
+                    <div class="btn-toolbar mb-2 mb-md-0">
+                        <div class="btn-group me-2">
+                            {% if request.endpoint == 'dashboard' %}
+                            <a href="{{ url_for('simulator') }}" class="btn btn-sm btn-outline-primary">
+                                <i class="fas fa-bolt me-1"></i>Run Attack Simulation
+                            </a>
+                            {% elif request.endpoint == 'simulator' %}
+                            <a href="{{ url_for('dashboard') }}" class="btn btn-sm btn-outline-primary">
+                                <i class="fas fa-tachometer-alt me-1"></i>View Dashboard
+                            </a>
+                            {% endif %}
+                            <a href="{{ url_for('settings') }}" class="btn btn-sm btn-outline-secondary">
+                                <i class="fas fa-cog me-1"></i>Settings
+                            </a>
+                        </div>
+                    </div>
                 </div>
                 
                 <!-- Flash messages -->

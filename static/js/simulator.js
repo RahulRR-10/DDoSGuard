@@ -165,8 +165,15 @@ function startAttack() {
         // Update UI
         updateSimulationStatus(true, attackType, duration, intensity, distribution);
         
-        // Show alert
-        showAlert('Attack simulation started successfully', 'success');
+        // Show alert with dashboard link
+        showAlert(`
+            <div class="d-flex justify-content-between align-items-center">
+                <span>Attack simulation started successfully</span>
+                <a href="/dashboard" class="btn btn-sm btn-outline-light ms-3">
+                    <i class="fas fa-tachometer-alt me-1"></i>View Effects on Dashboard
+                </a>
+            </div>
+        `, 'success');
     })
     .catch(error => {
         console.error('Error starting attack simulation:', error);
@@ -311,8 +318,14 @@ function showAlert(message, type = 'info') {
     alert.className = `alert alert-${type} alert-dismissible fade show`;
     alert.role = 'alert';
     
-    // Add message
-    alert.textContent = message;
+    // Add message - support HTML content
+    if (message.includes('<') && message.includes('>')) {
+        // Message contains HTML
+        alert.innerHTML = message;
+    } else {
+        // Plain text message
+        alert.textContent = message;
+    }
     
     // Add close button
     const closeButton = document.createElement('button');
@@ -327,9 +340,10 @@ function showAlert(message, type = 'info') {
     // Add alert to container
     alertContainer.appendChild(alert);
     
-    // Remove alert after 5 seconds
+    // Remove alert after longer time (8 seconds) for messages with links/buttons
+    const timeout = message.includes('<a ') ? 8000 : 5000;
     setTimeout(() => {
         alert.classList.remove('show');
         setTimeout(() => alert.remove(), 150);
-    }, 5000);
+    }, timeout);
 }

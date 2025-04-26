@@ -294,6 +294,10 @@ function startDataRefresh() {
     // Start refreshing table data
     refreshTableData();
     setInterval(refreshTableData, TABLE_REFRESH_INTERVAL);
+    
+    // Check if an attack simulation is running
+    checkAttackSimulationStatus();
+    setInterval(checkAttackSimulationStatus, 5000);
 }
 
 function refreshChartData() {
@@ -603,4 +607,58 @@ function updateTimeRange() {
             updateAnomalyData(data);
         })
         .catch(error => console.error('Error fetching anomaly data:', error));
+}
+
+function checkAttackSimulationStatus() {
+    // Check if an attack simulation is running
+    fetch('/api/simulate/status')
+        .then(response => response.json())
+        .then(data => {
+            // Get or create the alert banner
+            let alertBanner = document.getElementById('attackSimulationAlert');
+            
+            if (data.is_running) {
+                // If no alert exists, create one
+                if (!alertBanner) {
+                    alertBanner = document.createElement('div');
+                    alertBanner.id = 'attackSimulationAlert';
+                    alertBanner.className = 'alert alert-danger alert-dismissible fade show mb-4';
+                    alertBanner.role = 'alert';
+                    
+                    // Add it at the top of the main content area
+                    const mainContent = document.querySelector('main .container-fluid');
+                    if (mainContent) {
+                        mainContent.prepend(alertBanner);
+                    } else {
+                        document.querySelector('main').prepend(alertBanner);
+                    }
+                }
+                
+                // Format attack details
+                const attackName = data.attack_type || "Unknown";
+                const duration = data.duration || "Unknown";
+                const intensity = data.intensity || "Unknown";
+                
+                // Update alert content
+                alertBanner.innerHTML = `
+                    <div class="d-flex justify-content-between align-items-center">
+                        <div>
+                            <i class="fas fa-exclamation-triangle me-2"></i>
+                            <strong>Attack Simulation Running:</strong> 
+                            ${attackName} attack (Intensity: ${intensity}/10, Duration: ${duration}s)
+                        </div>
+                        <div>
+                            <a href="/simulator" class="btn btn-sm btn-outline-light me-2">
+                                <i class="fas fa-cog me-1"></i>Manage Simulation
+                            </a>
+                            <button type="button" class="btn-close" data-bs-dismiss="alert" aria-label="Close"></button>
+                        </div>
+                    </div>
+                `;
+            } else if (alertBanner) {
+                // Remove the alert if no attack is running
+                alertBanner.remove();
+            }
+        })
+        .catch(error => console.error('Error checking attack simulation status:', error));
 }

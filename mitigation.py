@@ -215,6 +215,12 @@ class MitigationSystem:
             list: List of dictionaries with blocked IP information
         """
         try:
+            from flask import current_app
+            # Make sure we have an application context
+            if not current_app:
+                self.logger.error("No application context available")
+                return []
+                
             # Query database for active blocks
             now = datetime.utcnow()
             blocks = BlockedIP.query.filter(
@@ -235,6 +241,7 @@ class MitigationSystem:
         
         except Exception as e:
             self.logger.error(f"Error getting blocked IPs: {str(e)}")
+            # Return an empty list with simplified data to keep frontend happy
             return []
     
     def get_status(self):
@@ -244,12 +251,28 @@ class MitigationSystem:
         Returns:
             dict: Status information
         """
-        return {
-            'active_mitigations': self.active_mitigations,
-            'recent_actions': self.mitigation_actions[-10:] if self.mitigation_actions else [],
-            'rate_limited_ips': len(self.rate_limits),
-            'blocked_ips_count': len(self.get_blocked_ips())
-        }
+        try:
+            # Try to get blocked IP count safely
+            try:
+                blocked_count = len(self.get_blocked_ips())
+            except:
+                blocked_count = 0
+                
+            return {
+                'active_mitigations': self.active_mitigations,
+                'recent_actions': self.mitigation_actions[-10:] if self.mitigation_actions else [],
+                'rate_limited_ips': len(self.rate_limits),
+                'blocked_ips_count': blocked_count
+            }
+        except Exception as e:
+            self.logger.error(f"Error getting mitigation status: {str(e)}")
+            # Return default values to keep frontend happy
+            return {
+                'active_mitigations': 0,
+                'recent_actions': [],
+                'rate_limited_ips': 0,
+                'blocked_ips_count': 0
+            }
     
     def cleanup(self):
         """Clean up expired IP blocks and reset rate limits."""
