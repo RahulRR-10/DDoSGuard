@@ -53,13 +53,23 @@ document.addEventListener('DOMContentLoaded', function() {
     
     // Restore timer state if we have session data
     if (savedAttackStartTime && sessionStorage.getItem('attackRunning') === 'true') {
-        // Convert ISO start time to Date
-        attackStartTime = new Date(savedAttackStartTime);
+        // Convert ISO start time to Date with timezone handling
+        let isoDate = savedAttackStartTime;
+        // Handle both Z and non-Z ISO formats 
+        if (!isoDate.endsWith('Z') && !isoDate.includes('+')) {
+            isoDate = isoDate + 'Z';
+        }
+        attackStartTime = new Date(isoDate);
         
         // Get duration from session storage
         if (savedAttackDuration) {
             attackDuration = parseInt(savedAttackDuration);
         }
+        
+        console.log('Restored timer state from session:', {
+            startTime: attackStartTime,
+            duration: attackDuration
+        });
         
         // Start the timer immediately instead of waiting for checkAttackStatus to complete
         startAttackTimer();
@@ -301,12 +311,21 @@ function checkAttackStatus() {
                     data // Pass the full data object for access to start_time
                 );
             } else {
-                // If the attack is not running, clear session storage
+                // If the attack is not running, clear session storage but check if state changed
+                const wasRunning = sessionStorage.getItem('attackRunning') === 'true';
+                
+                // Immediately remove the running flag
                 sessionStorage.removeItem('attackRunning');
                 
-                // Don't clear other values as they might be needed for displaying
-                // historical data about the last attack that ran
+                // If we were running before but now we're not, log the transition
+                if (wasRunning) {
+                    console.log('Attack stopped according to server. Clearing running state.');
+                    
+                    // Keep the start time and duration for a while to allow viewing final state
+                    // They'll be overwritten when a new attack starts
+                }
                 
+                // Update UI to show not running
                 updateSimulationStatus(false);
             }
         })
@@ -375,10 +394,22 @@ function updateSimulationStatus(isRunning, attackType = '', duration = 0, intens
                 // Get the most accurate start time - prefer server value if available
                 if (data && data.start_time) {
                     console.log('Using server start time:', data.start_time);
-                    attackStartTime = new Date(data.start_time);
+                    // Fix any timezone issues by manually parsing the ISO string
+                    let isoDate = data.start_time;
+                    // Handle both Z and non-Z ISO formats
+                    if (!isoDate.endsWith('Z') && !isoDate.includes('+')) {
+                        isoDate = isoDate + 'Z';
+                    }
+                    attackStartTime = new Date(isoDate);
                 } else if (savedAttackStartTime && sessionStorage.getItem('attackRunning') === 'true') {
                     console.log('Using saved start time:', savedAttackStartTime);
-                    attackStartTime = new Date(savedAttackStartTime);
+                    // Fix any timezone issues by manually parsing the ISO string
+                    let isoDate = savedAttackStartTime;
+                    // Handle both Z and non-Z ISO formats
+                    if (!isoDate.endsWith('Z') && !isoDate.includes('+')) {
+                        isoDate = isoDate + 'Z';
+                    }
+                    attackStartTime = new Date(isoDate);
                 } else {
                     console.log('Using current time as start time');
                     attackStartTime = new Date();
@@ -486,6 +517,12 @@ function updateTimerDisplay() {
         // Just update UI - the backend should handle the actual stopping
         timerDisplay.textContent = `${durationFormatted} / ${durationFormatted}`;
         timerDisplay.className = 'display-4 mb-0 text-success';
+        
+        // Check if we're showing completed but actually running
+        if (sessionStorage.getItem('attackRunning') === 'true') {
+            console.log('Refreshing attack status since timer reached duration');
+            checkAttackStatus(); // This will refresh the status from the server
+        }
         
         // Don't clear the interval as we should keep polling until server confirms it's stopped
     }
