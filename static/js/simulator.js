@@ -1,5 +1,10 @@
 // Simulator.js - Handles the attack simulation functionality
 
+// Global variables for timer
+let attackTimer = null;
+let attackStartTime = null;
+let attackDuration = 0;
+
 document.addEventListener('DOMContentLoaded', function() {
     console.log('Simulator initializing...');
     
@@ -12,6 +17,28 @@ document.addEventListener('DOMContentLoaded', function() {
     initDurationSlider();
     initIntensitySlider();
     initDistributionSelector();
+    
+    // Create timer display element if it doesn't exist
+    if (!document.getElementById('attackTimerDisplay')) {
+        const timerContainer = document.createElement('div');
+        timerContainer.id = 'attackTimerContainer';
+        timerContainer.className = 'mt-3 d-none';
+        timerContainer.innerHTML = `
+            <div class="card border-danger">
+                <div class="card-body p-2 text-center">
+                    <h5 class="card-title mb-1">Attack Timer</h5>
+                    <div class="d-flex justify-content-center align-items-center">
+                        <div id="attackTimerDisplay" class="display-4 mb-0 text-danger">00:00</div>
+                    </div>
+                    <small class="text-muted">Time Elapsed / Total Duration</small>
+                </div>
+            </div>
+        `;
+        
+        // Add timer after attack details
+        const detailsContainer = document.getElementById('attackDetailsContainer');
+        detailsContainer.parentNode.insertBefore(timerContainer, detailsContainer.nextSibling);
+    }
     
     // Check if an attack is currently running
     checkAttackStatus();
@@ -253,6 +280,7 @@ function updateSimulationStatus(isRunning, attackType = '', duration = 0, intens
     const startButton = document.getElementById('startAttackBtn');
     const stopButton = document.getElementById('stopAttackBtn');
     const attackDetails = document.getElementById('attackDetails');
+    const timerContainer = document.getElementById('attackTimerContainer');
     
     if (isRunning) {
         // Show running status
@@ -288,6 +316,20 @@ function updateSimulationStatus(isRunning, attackType = '', duration = 0, intens
         `;
         
         document.getElementById('attackDetailsContainer').style.display = 'block';
+        
+        // Start or update the timer
+        if (timerContainer) {
+            timerContainer.className = 'mt-3';
+            
+            // Store the attack duration for the timer
+            attackDuration = parseInt(duration);
+            
+            // If timer is not running, start it
+            if (!attackTimer) {
+                attackStartTime = new Date();
+                startAttackTimer();
+            }
+        }
     } else {
         // Show idle status
         statusContainer.style.display = 'block';
@@ -307,6 +349,68 @@ function updateSimulationStatus(isRunning, attackType = '', duration = 0, intens
         
         // Hide attack details
         document.getElementById('attackDetailsContainer').style.display = 'none';
+        
+        // Stop the timer
+        if (attackTimer) {
+            clearInterval(attackTimer);
+            attackTimer = null;
+        }
+        
+        // Hide timer container
+        if (timerContainer) {
+            timerContainer.className = 'mt-3 d-none';
+        }
+    }
+}
+
+function startAttackTimer() {
+    // Clear any existing timer
+    if (attackTimer) {
+        clearInterval(attackTimer);
+    }
+    
+    // Update timer display immediately
+    updateTimerDisplay();
+    
+    // Set up timer to update every second
+    attackTimer = setInterval(updateTimerDisplay, 1000);
+}
+
+function updateTimerDisplay() {
+    const timerDisplay = document.getElementById('attackTimerDisplay');
+    if (!timerDisplay) return;
+    
+    // Calculate elapsed time
+    const now = new Date();
+    const elapsedSeconds = Math.floor((now - attackStartTime) / 1000);
+    
+    // Format elapsed time as MM:SS
+    const elapsedMinutes = Math.floor(elapsedSeconds / 60);
+    const remainingSeconds = elapsedSeconds % 60;
+    const elapsedFormatted = `${elapsedMinutes.toString().padStart(2, '0')}:${remainingSeconds.toString().padStart(2, '0')}`;
+    
+    // Format total duration as MM:SS
+    const durationMinutes = Math.floor(attackDuration / 60);
+    const durationSeconds = attackDuration % 60;
+    const durationFormatted = `${durationMinutes.toString().padStart(2, '0')}:${durationSeconds.toString().padStart(2, '0')}`;
+    
+    // Update display
+    timerDisplay.textContent = `${elapsedFormatted} / ${durationFormatted}`;
+    
+    // Change color to warn when getting close to end
+    if (elapsedSeconds >= attackDuration * 0.8) {
+        timerDisplay.className = 'display-4 mb-0 text-warning';
+    } else {
+        timerDisplay.className = 'display-4 mb-0 text-danger';
+    }
+    
+    // Auto-stop timer when duration is reached
+    if (elapsedSeconds >= attackDuration) {
+        // Just update UI - the backend should handle the actual stopping
+        timerDisplay.textContent = `${durationFormatted} / ${durationFormatted}`;
+        timerDisplay.className = 'display-4 mb-0 text-success';
+        
+        // Don't clear the interval as we should keep polling until server confirms it's stopped
     }
 }
 
