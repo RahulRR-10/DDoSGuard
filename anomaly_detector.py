@@ -4,7 +4,7 @@ from collections import deque
 from datetime import datetime, timedelta
 from sklearn.ensemble import IsolationForest
 from models import AnomalyLog
-from app import db
+from db import db
 
 class AnomalyDetector:
     """

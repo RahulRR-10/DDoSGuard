@@ -6,7 +6,7 @@ from collections import deque, Counter
 from datetime import datetime, timedelta
 from scipy.stats import entropy
 from models import TrafficLog, TrafficMetrics, BaselineProfile
-from app import db
+from db import db
 
 class TrafficProfiler:
     """

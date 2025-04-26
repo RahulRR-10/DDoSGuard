@@ -5,17 +5,11 @@ from flask import Flask, render_template, request, jsonify, redirect, url_for, f
 from flask_sqlalchemy import SQLAlchemy
 from sqlalchemy.orm import DeclarativeBase
 from werkzeug.middleware.proxy_fix import ProxyFix
+from db import db
 
 # Configure logging
 logging.basicConfig(level=logging.DEBUG)
 logger = logging.getLogger(__name__)
-
-# Base class for SQLAlchemy models
-class Base(DeclarativeBase):
-    pass
-
-# Initialize database
-db = SQLAlchemy(model_class=Base)
 
 # Create Flask application
 app = Flask(__name__)
@@ -280,127 +274,82 @@ def get_attack_history():
         from models import AttackLog
         import random
         from datetime import datetime, timedelta
-        
+
         # Query all attacks regardless of status to make sure we're getting data
         all_attacks = AttackLog.query.order_by(AttackLog.start_time.desc()).limit(100).all()
-        
+
         # Log what we found for debugging
         app.logger.debug(f"Found {len(all_attacks)} total attack records in database")
-        
-        # Always generate at least 10 sample attack records if we have less than 10
-        # This ensures we always have data to display in the reports tab
-        if len(all_attacks) < 10:
-            app.logger.info(f"Only found {len(all_attacks)} attack logs. Adding sample attack history for comprehensive reporting.")
-            
-            # Get attack types from simulator to use real values
-            attack_types = attack_simulator.get_attack_types()
-            distributions = ['random', 'subnet', 'fixed']
-            
-            # Create sample attacks across the past 48 hours
-            now = datetime.utcnow()
-            
-            # Generate between 10-15 sample attacks
-            num_attacks = random.randint(10, 15)
-            
-            for i in range(num_attacks):
-                # Random start time in the past 48 hours
-                hours_ago = random.randint(1, 48)
-                minutes_ago = random.randint(0, 59)
-                start_time = now - timedelta(hours=hours_ago, minutes=minutes_ago)
-                
-                # Duration between 1-30 minutes
-                duration_minutes = random.randint(1, 30)
-                end_time = start_time + timedelta(minutes=duration_minutes)
-                
-                # Last attack might still be active
-                is_active = (i == 0 and random.random() < 0.3)
-                
-                # Random attack parameters
-                attack_type = random.choice(attack_types)
-                intensity = random.randint(3, 10)
-                distribution = random.choice(distributions)
-                
-                # Create and add the attack log
-                attack_log = AttackLog(
-                    start_time=start_time,
-                    end_time=None if is_active else end_time,
-                    attack_type=attack_type,
-                    intensity=intensity,
-                    distribution=distribution,
-                    is_active=is_active
-                )
-                
-                db.session.add(attack_log)
-            
-            db.session.commit()
-            app.logger.info(f"Created {num_attacks} sample attack logs for demonstration")
-            
-            # Refetch attacks after creating samples
-            all_attacks = AttackLog.query.order_by(AttackLog.start_time.desc()).limit(100).all()
-        
-        # Handle active and inactive attacks separately
-        active_attacks = []
-        completed_attacks = []
-        
-        for attack in all_attacks:
-            if attack.is_active:
-                active_attacks.append(attack)
-            elif attack.end_time is not None:
-                completed_attacks.append(attack)
-        
-        # Limited to 20 most recent attacks
-        attacks = active_attacks + completed_attacks[:20]
-        
+
         result = []
-        for attack in attacks:
-            # Create a dictionary with all available attack data
+        for attack in all_attacks:
             attack_data = {
                 'id': attack.id,
-                'start_time': attack.start_time,
-                'end_time': attack.end_time,
+                'start_time': attack.start_time.isoformat() if attack.start_time else None,
+                'end_time': attack.end_time.isoformat() if attack.end_time else None,
                 'attack_type': attack.attack_type or 'unknown',
                 'intensity': attack.intensity or 5,
                 'distribution': attack.distribution or 'random',
                 'is_active': attack.is_active
             }
             result.append(attack_data)
-            
+
+        # If there are fewer than 10 records, generate in-memory sample data (do not write to DB)
+        if len(result) < 10:
+            app.logger.info(f"Only found {len(result)} attack logs. Adding sample attack history for comprehensive reporting (in-memory only).")
+            attack_types = attack_simulator.get_attack_types()
+            distributions = ['random', 'subnet', 'fixed']
+            now = datetime.utcnow()
+            num_attacks = 10 - len(result)
+            for i in range(num_attacks):
+                hours_ago = random.randint(1, 48)
+                minutes_ago = random.randint(0, 59)
+                start_time = now - timedelta(hours=hours_ago, minutes=minutes_ago)
+                duration_minutes = random.randint(1, 30)
+                end_time = start_time + timedelta(minutes=duration_minutes)
+                is_active = False
+                attack_type = random.choice(attack_types)
+                intensity = random.randint(3, 10)
+                distribution = random.choice(distributions)
+                attack_data = {
+                    'id': f'sample-{i+1}',
+                    'start_time': start_time.isoformat(),
+                    'end_time': end_time.isoformat(),
+                    'attack_type': attack_type,
+                    'intensity': intensity,
+                    'distribution': distribution,
+                    'is_active': is_active
+                }
+                result.append(attack_data)
+
         app.logger.info(f"Returning {len(result)} attack history records for reports page")
         return jsonify(result)
-        
+
     except Exception as e:
         app.logger.error(f"Error getting attack history: {str(e)}")
-        
         # On error, generate and return some minimal fake data to prevent UI from breaking
         try:
-            # Generate a minimal set of sample attacks just in memory (not saved to DB)
             app.logger.info("Error occurred. Generating minimal fallback attack history.")
             result = []
             now = datetime.utcnow()
-            
-            # Create 5 simple attack records spanning the last 24 hours
             for i in range(5):
                 hours_ago = random.randint(1, 24)
                 duration_minutes = random.randint(5, 30)
-                
                 start_time = now - timedelta(hours=hours_ago)
                 end_time = start_time + timedelta(minutes=duration_minutes)
-                
                 attack_data = {
-                    'id': i + 1,
-                    'start_time': start_time,
-                    'end_time': end_time,
+                    'id': f'fallback-{i+1}',
+                    'start_time': start_time.isoformat(),
+                    'end_time': end_time.isoformat(),
                     'attack_type': 'flooding',
                     'intensity': 5,
                     'distribution': 'random',
                     'is_active': False
                 }
                 result.append(attack_data)
-                
             return jsonify(result)
         except Exception as inner_e:
             app.logger.error(f"Error generating fallback attack history: {str(inner_e)}")
-            # Last resort - empty list
             return jsonify([])
 
 @app.route('/api/settings/update', methods=['POST'])

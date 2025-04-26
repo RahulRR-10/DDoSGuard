@@ -2,7 +2,7 @@ import logging
 from datetime import datetime, timedelta
 from collections import defaultdict
 from models import BlockedIP
-from app import db
+from db import db
 
 class MitigationSystem:
     """

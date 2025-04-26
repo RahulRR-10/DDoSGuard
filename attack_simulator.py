@@ -54,6 +54,7 @@ class AttackSimulator:
             intensity (int): Attack intensity level (1-10)
             distribution (str): IP distribution pattern ('random', 'subnet', 'fixed')
         """
+        self.logger.debug(f"[DEBUG] start_attack called with is_running={self.is_running}")
         if self.is_running:
             self.logger.info("Attack already in progress, stopping current attack")
             self.stop_attack()
@@ -62,6 +63,7 @@ class AttackSimulator:
         
         # Set basic status even before DB operations
         self.is_running = True
+        self.logger.debug(f"[DEBUG] is_running set to True in start_attack")
         self.attack_type = attack_type
         self.attack_intensity = intensity
         self.attack_distribution = distribution
@@ -97,14 +99,17 @@ class AttackSimulator:
         attack_func = self.attack_types.get(attack_type, self._flooding_attack)
         
         # Start attack in separate thread
+        self.logger.debug(f"[DEBUG] About to start attack thread")
         self.attack_thread = threading.Thread(
             target=self._run_attack,
             args=(attack_func, duration, intensity, distribution)
         )
         self.attack_thread.daemon = True
         self.attack_thread.start()
+        self.logger.debug(f"[DEBUG] Attack thread started")
         
         self.is_running = True
+        self.logger.debug(f"[DEBUG] is_running confirmed True after thread start")
     
     def stop_attack(self):
         """Stop any ongoing attack simulation."""
@@ -154,6 +159,7 @@ class AttackSimulator:
             intensity (int): Attack intensity (1-10)
             distribution (str): IP distribution pattern
         """
+        self.logger.info(f"_run_attack started - attack will run for {duration} seconds with intensity {intensity}")
         start_time = time.time()
         end_time = start_time + duration
         
@@ -187,20 +193,31 @@ class AttackSimulator:
                 attack_iteration += 1
                 # Log every 10 iterations
                 if attack_iteration % 10 == 0:
-                    self.logger.info(f"Attack in progress: iteration {attack_iteration}, {int((time.time() - start_time))}s elapsed")
+                    elapsed = int(time.time() - start_time)
+                    remaining = duration - elapsed
+                    self.logger.info(f"Attack in progress: iteration {attack_iteration}, {elapsed}s elapsed, {remaining}s remaining")
                 
                 # Call the attack function with the parameters
                 attack_func(intensity, distribution)
                 
                 # Check if we should stop
                 if self.stop_event.wait(0.1):
+                    self.logger.info("Attack stopped manually through stop_event")
                     break
             
-            self.logger.info("Attack simulation completed")
+            # Check if we reached the end naturally or were stopped
+            if time.time() >= end_time:
+                self.logger.info(f"Attack simulation completed - reached full duration of {duration}s")
+            
         except Exception as e:
             self.logger.error(f"Error in attack simulation: {str(e)}")
         finally:
-            self.is_running = False
+            # Only set is_running to False if we actually completed
+            if time.time() >= end_time or self.stop_event.is_set():
+                self.is_running = False
+                self.logger.info("Attack finished - setting is_running=False")
+            else:
+                self.logger.warning("Attack thread terminating but attack should still be running")
             
             # Ensure the attack log is properly marked as completed
             if self.current_attack:
