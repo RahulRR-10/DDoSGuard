@@ -21,48 +21,75 @@ document.addEventListener('DOMContentLoaded', function() {
 function loadAttackHistory() {
     console.log('Fetching attack history data...');
     
-    fetch('/api/simulate/attack/history')
-        .then(response => {
-            if (!response.ok) {
-                throw new Error(`HTTP error! Status: ${response.status}`);
-            }
-            return response.json();
-        })
-        .then(data => {
-            console.log(`Retrieved ${data.length} attack history records`);
-            
-            if (data.length === 0) {
-                // Display helpful message when no attack data is available
+    // Display loading indicator
+    document.getElementById('attackHistoryTableBody').innerHTML = `
+        <tr>
+            <td colspan="7" class="text-center text-muted py-5">
+                <div class="spinner-border text-primary mb-3" role="status">
+                    <span class="visually-hidden">Loading...</span>
+                </div>
+                <p>Loading attack history data...</p>
+            </td>
+        </tr>
+    `;
+    
+    // Force a delay to ensure any previous attack simulation has been properly recorded
+    setTimeout(() => {
+        fetch('/api/simulate/attack/history')
+            .then(response => {
+                if (!response.ok) {
+                    throw new Error(`HTTP error! Status: ${response.status}`);
+                }
+                return response.json();
+            })
+            .then(data => {
+                console.log(`Retrieved ${data.length} attack history records`);
+                
+                if (data.length === 0) {
+                    // Display helpful message when no attack data is available
+                    document.getElementById('attackHistoryTableBody').innerHTML = `
+                        <tr>
+                            <td colspan="7" class="text-center text-muted py-5">
+                                <i class="fas fa-info-circle mb-3 display-4"></i>
+                                <p>No attack simulations have been run yet.</p>
+                                <p>Go to the Attack Simulator tab to run attack simulations.</p>
+                            </td>
+                        </tr>
+                    `;
+                    // Initialize empty charts
+                    initEmptyCharts();
+                } else {
+                    // Filter out any sample data if we have real data
+                    const realData = data.filter(item => !String(item.id).startsWith('sample-') && !String(item.id).startsWith('fallback-'));
+                    
+                    if (realData.length > 0) {
+                        // Use only real data if available
+                        updateAttackHistoryTable(realData);
+                        updateAttackCharts(realData);
+                    } else {
+                        // Otherwise use all data (including samples)
+                        updateAttackHistoryTable(data);
+                        updateAttackCharts(data);
+                    }
+                }
+            })
+            .catch(error => {
+                console.error('Error fetching attack history:', error);
+                // Show error message
                 document.getElementById('attackHistoryTableBody').innerHTML = `
                     <tr>
-                        <td colspan="7" class="text-center text-muted py-5">
-                            <i class="fas fa-info-circle mb-3 display-4"></i>
-                            <p>No attack simulations have been run yet.</p>
-                            <p>Go to the Attack Simulator tab to run attack simulations.</p>
+                        <td colspan="7" class="text-center text-danger py-5">
+                            <i class="fas fa-exclamation-triangle mb-3 display-4"></i>
+                            <p>Error loading attack history data.</p>
+                            <p class="small">${error.message || 'Unknown error'}</p>
+                            <button class="btn btn-sm btn-primary mt-2" onclick="loadAttackHistory()">
+                                Try Again
+                            </button>
                         </td>
                     </tr>
                 `;
-                // Initialize empty charts
-                initEmptyCharts();
-            } else {
-                // Update the table and charts with the data
-                updateAttackHistoryTable(data);
-                updateAttackCharts(data);
-            }
-        })
-        .catch(error => {
-            console.error('Error fetching attack history:', error);
-            // Show error message
-            document.getElementById('attackHistoryTableBody').innerHTML = `
-                <tr>
-                    <td colspan="7" class="text-center text-danger py-5">
-                        <i class="fas fa-exclamation-triangle mb-3 display-4"></i>
-                        <p>Error loading attack history data.</p>
-                        <p class="small">${error.message || 'Unknown error'}</p>
-                    </td>
-                </tr>
-            `;
-        });
+            });
+    }, 1000); // 1 second delay to ensure database is updated
 }
 
 function updateAttackHistoryTable(attacks) {

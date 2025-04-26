@@ -377,19 +377,57 @@ function refreshChartData() {
 function refreshTableData() {
     // Fetch mitigation status
     fetch('/api/mitigation/status')
-        .then(response => response.json())
+        .then(response => {
+            if (!response.ok) {
+                throw new Error(`HTTP error! Status: ${response.status}`);
+            }
+            return response.json();
+        })
         .then(data => {
             updateMitigationStatus(data);
         })
-        .catch(error => console.error('Error fetching mitigation status:', error));
+        .catch(error => {
+            console.error('Error fetching mitigation status:', error);
+            // Display error in status
+            const statusTable = document.getElementById('mitigationStatusTable');
+            if (statusTable) {
+                statusTable.innerHTML = `
+                    <tr>
+                        <td colspan="2" class="text-center text-danger py-3">
+                            <i class="fas fa-exclamation-triangle me-2"></i>
+                            Error loading mitigation status. Will retry automatically.
+                        </td>
+                    </tr>
+                `;
+            }
+        });
     
     // Fetch blocked IPs
     fetch('/api/mitigation/blocked')
-        .then(response => response.json())
+        .then(response => {
+            if (!response.ok) {
+                throw new Error(`HTTP error! Status: ${response.status}`);
+            }
+            return response.json();
+        })
         .then(data => {
             updateBlockedIPs(data);
         })
-        .catch(error => console.error('Error fetching blocked IPs:', error));
+        .catch(error => {
+            console.error('Error fetching blocked IPs:', error);
+            // Display error in blocked IPs table
+            const blockedTable = document.getElementById('blockedIPsTableBody');
+            if (blockedTable) {
+                blockedTable.innerHTML = `
+                    <tr>
+                        <td colspan="5" class="text-center text-danger py-3">
+                            <i class="fas fa-exclamation-triangle me-2"></i>
+                            Error loading blocked IP data. Will retry automatically.
+                        </td>
+                    </tr>
+                `;
+            }
+        });
 }
 
 function updateTrafficData(data) {
@@ -751,8 +789,27 @@ function updateTimeRange() {
 function checkAttackSimulationStatus() {
     // Check if an attack simulation is running
     fetch('/api/simulate/status')
-        .then(response => response.json())
+        .then(response => {
+            if (!response.ok) {
+                throw new Error(`HTTP error! Status: ${response.status}`);
+            }
+            return response.json();
+        })
         .then(data => {
+            // If an attack just ended (attack_type exists but is_running is false),
+            // reload the attack history to make sure it's current
+            if (!data.is_running && data.attack_type) {
+                setTimeout(() => {
+                    // Only reload if we're on the reports page
+                    if (window.location.pathname.includes('reports')) {
+                        console.log('Attack ended, reloading attack history...');
+                        if (typeof loadAttackHistory === 'function') {
+                            loadAttackHistory();
+                        }
+                    }
+                }, 2000); // Small delay to ensure database is updated
+            }
+            
             // Get or create the alert banner
             let alertBanner = document.getElementById('attackSimulationAlert');
             
@@ -799,5 +856,35 @@ function checkAttackSimulationStatus() {
                 alertBanner.remove();
             }
         })
-        .catch(error => console.error('Error checking attack simulation status:', error));
+        .catch(error => {
+            console.error('Error checking attack simulation status:', error);
+            // Update the attack status indicator to show an error
+            const mainContent = document.querySelector('main .container-fluid');
+            if (mainContent) {
+                let errorBanner = document.getElementById('attackStatusError');
+                if (!errorBanner) {
+                    errorBanner = document.createElement('div');
+                    errorBanner.id = 'attackStatusError';
+                    errorBanner.className = 'alert alert-warning alert-dismissible fade show mb-4';
+                    errorBanner.innerHTML = `
+                        <div class="d-flex justify-content-between align-items-center">
+                            <div>
+                                <i class="fas fa-exclamation-triangle me-2"></i>
+                                Error checking attack status. Will retry automatically.
+                            </div>
+                            <button type="button" class="btn-close" data-bs-dismiss="alert" aria-label="Close"></button>
+                        </div>
+                    `;
+                    mainContent.prepend(errorBanner);
+                    
+                    // Auto-remove after 10 seconds to avoid cluttering UI
+                    setTimeout(() => {
+                        const banner = document.getElementById('attackStatusError');
+                        if (banner) {
+                            banner.remove();
+                        }
+                    }, 10000);
+                }
+            }
+        });
 }
