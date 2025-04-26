@@ -1,6 +1,7 @@
 import logging
 import heapq
 import time
+import random
 from datetime import datetime, timedelta
 from collections import defaultdict, OrderedDict, deque
 from models import BlockedIP
@@ -621,10 +622,11 @@ class MitigationSystem:
             if graph_size > 0:
                 # Calculate average connections per node
                 total_connections = sum(len(node.connections) for node in self.ip_graph.values())
-                graph_stats['avg_connections'] = round(total_connections / graph_size, 2)
+                graph_stats['avg_connections'] = float(total_connections) / float(graph_size) if graph_size > 0 else 0.0
                 
                 # Find maximum weight
-                graph_stats['max_weight'] = round(max(node.weight for node in self.ip_graph.values()), 2)
+                if self.ip_graph.values():
+                    graph_stats['max_weight'] = float(max(node.weight for node in self.ip_graph.values()))
                 
                 # Find most connected IPs (network hubs)
                 most_connected = sorted(
@@ -633,9 +635,13 @@ class MitigationSystem:
                     reverse=True
                 )[:5]
                 
-                graph_stats['most_connected'] = [
-                    {'ip': ip, 'connections': count} for ip, count in most_connected if count > 0
-                ]
+                # Add most connected IPs to stats - handle type properly
+                if most_connected:
+                    most_connected_list = [
+                        {'ip': ip, 'connections': count} for ip, count in most_connected if count > 0
+                    ]
+                    if most_connected_list:
+                        graph_stats['most_connected'] = most_connected_list
             
             # Get sliding window statistics
             window_stats = {
