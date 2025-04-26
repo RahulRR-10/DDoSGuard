@@ -303,27 +303,75 @@ function startDataRefresh() {
 function refreshChartData() {
     // Fetch current traffic data
     fetch('/api/traffic/current')
-        .then(response => response.json())
+        .then(response => {
+            if (!response.ok) {
+                throw new Error(`HTTP error! Status: ${response.status}`);
+            }
+            return response.json();
+        })
         .then(data => {
+            // Check if we have data
+            if (!data || Object.keys(data).length === 0) {
+                // If no data, create a placeholder with default values
+                data = {
+                    timestamp: new Date().toISOString(),
+                    requests_per_second: 0,
+                    unique_ips: 0,
+                    entropy_value: 0,
+                    burst_score: 0,
+                    total_requests: 0
+                };
+            }
             updateTrafficData(data);
         })
-        .catch(error => console.error('Error fetching traffic data:', error));
+        .catch(error => {
+            console.error('Error fetching traffic data:', error);
+            // Generate a default data point to keep chart continuity
+            const defaultData = {
+                timestamp: new Date().toISOString(),
+                requests_per_second: 0,
+                unique_ips: 0,
+                entropy_value: 0,
+                burst_score: 0,
+                total_requests: 0
+            };
+            updateTrafficData(defaultData);
+        });
     
     // Fetch anomaly data
     fetch('/api/anomalies')
-        .then(response => response.json())
+        .then(response => {
+            if (!response.ok) {
+                throw new Error(`HTTP error! Status: ${response.status}`);
+            }
+            return response.json();
+        })
         .then(data => {
+            // Even if we get an empty array, that's valid
             updateAnomalyData(data);
         })
-        .catch(error => console.error('Error fetching anomaly data:', error));
+        .catch(error => {
+            console.error('Error fetching anomaly data:', error);
+            // Pass empty array to maintain chart
+            updateAnomalyData([]);
+        });
     
     // Fetch traffic history for more comprehensive view
     fetch('/api/traffic/history')
-        .then(response => response.json())
+        .then(response => {
+            if (!response.ok) {
+                throw new Error(`HTTP error! Status: ${response.status}`);
+            }
+            return response.json();
+        })
         .then(data => {
             processTrafficHistory(data);
         })
-        .catch(error => console.error('Error fetching traffic history:', error));
+        .catch(error => {
+            console.error('Error fetching traffic history:', error);
+            // Call process with empty array to handle properly
+            processTrafficHistory([]);
+        });
 }
 
 function refreshTableData() {
