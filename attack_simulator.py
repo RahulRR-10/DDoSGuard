@@ -46,20 +46,34 @@ class AttackSimulator:
         
         self.logger.info(f"Starting {attack_type} attack simulation (duration: {duration}s, intensity: {intensity})")
         
+        # Set basic status even before DB operations
+        self.is_running = True
+        self.attack_type = attack_type
+        self.attack_intensity = intensity
+        self.attack_distribution = distribution
+        self.attack_duration = duration
+        self.attack_start_time = datetime.utcnow()
+        
         # Create attack log entry
         try:
-            attack_log = AttackLog(
-                attack_type=attack_type,
-                intensity=intensity,
-                distribution=distribution,
-                is_active=True
-            )
-            db.session.add(attack_log)
-            db.session.commit()
-            self.current_attack = attack_log
+            from app import app
+            with app.app_context():
+                attack_log = AttackLog(
+                    attack_type=attack_type,
+                    intensity=intensity,
+                    distribution=distribution,
+                    is_active=True
+                )
+                db.session.add(attack_log)
+                db.session.commit()
+                self.current_attack = attack_log
+                self.logger.info(f"Created attack log with ID: {attack_log.id}")
         except Exception as e:
             self.logger.error(f"Error logging attack start: {str(e)}")
-            db.session.rollback()
+            try:
+                db.session.rollback()
+            except:
+                pass
         
         # Reset stop event
         self.stop_event.clear()
@@ -90,15 +104,30 @@ class AttackSimulator:
         
         self.is_running = False
         
-        # Update attack log
+        # Update attack log with proper app context
         if self.current_attack:
             try:
-                self.current_attack.end_time = datetime.utcnow()
-                self.current_attack.is_active = False
-                db.session.commit()
+                from app import app
+                with app.app_context():
+                    from models import AttackLog
+                    
+                    # Get fresh instance from database
+                    attack_id = self.current_attack.id
+                    attack_log = AttackLog.query.filter_by(id=attack_id).first()
+                    
+                    if attack_log:
+                        attack_log.end_time = datetime.utcnow()
+                        attack_log.is_active = False
+                        db.session.commit()
+                        self.logger.info(f"Successfully updated attack log ID {attack_id} to inactive")
+                    else:
+                        self.logger.warning(f"Could not find attack log with ID {attack_id}")
             except Exception as e:
                 self.logger.error(f"Error updating attack log: {str(e)}")
-                db.session.rollback()
+                try:
+                    db.session.rollback()
+                except:
+                    pass
     
     def _run_attack(self, attack_func, duration, intensity, distribution):
         """
@@ -388,7 +417,7 @@ class AttackSimulator:
         """
         try:
             # First check if attack is running based on our thread
-            if not self.is_running or not self.current_attack:
+            if not self.is_running:
                 return {
                     'is_running': False,
                     'attack_type': None,
@@ -398,40 +427,72 @@ class AttackSimulator:
                     'duration': None
                 }
             
-            # Get latest status from the database to avoid detached instance errors
-            from app import db
-            from models import AttackLog
-            
-            # Refresh the attack log from database
-            attack_id = self.current_attack.id
-            attack_log = AttackLog.query.filter_by(id=attack_id).first()
-            
-            if not attack_log:
-                self.is_running = False
-                self.current_attack = None
+            # Use instance attributes if available
+            if hasattr(self, 'attack_type') and hasattr(self, 'attack_intensity'):
                 return {
-                    'is_running': False,
-                    'attack_type': None,
-                    'start_time': None,
-                    'intensity': None,
-                    'distribution': None,
-                    'duration': None
+                    'is_running': True,
+                    'attack_type': getattr(self, 'attack_type', 'unknown'),
+                    'start_time': getattr(self, 'attack_start_time', datetime.utcnow()),
+                    'intensity': getattr(self, 'attack_intensity', 5),
+                    'distribution': getattr(self, 'attack_distribution', 'random'),
+                    'duration': getattr(self, 'attack_duration', 60)
                 }
             
-            # Use refreshed attack log data
+            # Try to get from database with proper app context
+            if self.current_attack:
+                try:
+                    from app import app
+                    with app.app_context():
+                        from models import AttackLog
+                        
+                        # Refresh the attack log from database
+                        attack_id = self.current_attack.id
+                        attack_log = AttackLog.query.filter_by(id=attack_id).first()
+                        
+                        if not attack_log:
+                            self.is_running = False
+                            self.current_attack = None
+                            return {
+                                'is_running': False,
+                                'attack_type': None,
+                                'start_time': None,
+                                'intensity': None,
+                                'distribution': None,
+                                'duration': None
+                            }
+                        
+                        # Update our instance attributes
+                        self.attack_type = attack_log.attack_type
+                        self.attack_intensity = attack_log.intensity
+                        self.attack_distribution = attack_log.distribution
+                        self.attack_start_time = attack_log.start_time
+                        
+                        # Use refreshed attack log data
+                        return {
+                            'is_running': self.is_running,
+                            'attack_type': attack_log.attack_type,
+                            'start_time': attack_log.start_time,
+                            'intensity': attack_log.intensity,
+                            'distribution': attack_log.distribution,
+                            'duration': 60  # Default duration
+                        }
+                except Exception as e:
+                    self.logger.error(f"Error refreshing attack log: {str(e)}")
+            
+            # Fallback to safe defaults
             return {
-                'is_running': self.is_running,
-                'attack_type': attack_log.attack_type,
-                'start_time': attack_log.start_time,
-                'intensity': attack_log.intensity,
-                'distribution': attack_log.distribution,
-                'duration': 60  # Default duration
+                'is_running': True,
+                'attack_type': 'unknown',
+                'start_time': datetime.utcnow(),
+                'intensity': 5,
+                'distribution': 'random',
+                'duration': 60
             }
         except Exception as e:
             self.logger.error(f"Error getting attack status: {str(e)}")
             # Return safe defaults
             return {
-                'is_running': self.is_running,
+                'is_running': self.is_running if hasattr(self, 'is_running') else False,
                 'attack_type': 'unknown',
                 'start_time': None,
                 'intensity': 5,
