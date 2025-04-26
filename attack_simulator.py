@@ -1,11 +1,18 @@
 import logging
-import random
 import threading
 import time
+import random
 import requests
 from datetime import datetime, timedelta
-from models import AttackLog
-from app import db
+
+from flask_sqlalchemy import SQLAlchemy
+from flask import abort, request, jsonify
+
+# Import DB from app module
+try:
+    from app import db
+except ImportError:
+    db = None
 
 class AttackSimulator:
     """
@@ -65,6 +72,7 @@ class AttackSimulator:
         try:
             from app import app
             with app.app_context():
+                from models import AttackLog
                 attack_log = AttackLog(
                     attack_type=attack_type,
                     intensity=intensity,
@@ -318,10 +326,11 @@ class AttackSimulator:
                 self.logger.error(f"Error sending simulated request: {str(e)}")
                 pass
             
-            time.sleep(0.005)  # Very small delay during burst
+            # Small delay between requests
+            time.sleep(0.001)
         
-        # Pause between bursts
-        time.sleep(1.0)
+        # Pause between bursts (typical of pulsing attacks)
+        time.sleep(0.5)
     
     def _slowloris_attack(self, intensity, distribution):
         """
@@ -331,7 +340,7 @@ class AttackSimulator:
             intensity (int): Attack intensity (1-10)
             distribution (str): IP distribution pattern
         """
-        # Number of parallel connections
+        # Fewer connections but they stay open longer
         num_connections = intensity * 2  # 2-20 connections
         
         for _ in range(num_connections):
@@ -340,16 +349,16 @@ class AttackSimulator:
             
             ip = self._generate_ip(distribution)
             
-            # Simulate partial request
+            # Simulate a slow, incomplete request
             try:
-                # Use direct function call instead of HTTP request to avoid network issues
                 from app import process_request, app
                 with app.test_request_context(
                     path='/process_request',
                     headers={
                         'X-Forwarded-For': ip,
-                        'Connection': 'keep-alive',
-                        'X-Attack-Type': 'slowloris'  # Mark as slowloris attack
+                        'X-Attack-Type': 'slowloris',  # Mark as slowloris attack traffic
+                        'Content-Length': '10000',  # Large content length but sending incomplete data
+                        'Keep-Alive': 'timeout=30'  # Long keep-alive
                     }
                 ):
                     process_request()
@@ -358,9 +367,9 @@ class AttackSimulator:
             except Exception as e:
                 self.logger.error(f"Error sending simulated request: {str(e)}")
                 pass
-        
-        # Keep connections open for a while
-        time.sleep(0.5)
+            
+            # Longer delay to simulate holding connections open
+            time.sleep(0.2)
     
     def _syn_flood_simulation(self, intensity, distribution):
         """
@@ -370,16 +379,15 @@ class AttackSimulator:
             intensity (int): Attack intensity (1-10)
             distribution (str): IP distribution pattern
         """
-        # We can't do real SYN floods, so just simulate with API calls
-        num_requests = intensity * 8  # 8-80 requests
+        # Many connection attempts that never complete
+        num_syn_packets = intensity * 15  # 15-150 SYN packets
         
-        for _ in range(num_requests):
+        for _ in range(num_syn_packets):
             if self.stop_event.is_set():
                 break
             
             ip = self._generate_ip(distribution)
             
-            # Simulate SYN flood by sending request with SYN header
             try:
                 # Use direct function call instead of HTTP request to avoid network issues
                 from app import process_request, app
@@ -387,15 +395,21 @@ class AttackSimulator:
                     path='/process_request',
                     headers={
                         'X-Forwarded-For': ip,
-                        'X-Attack-Type': 'syn_flood'  # Custom header for simulation
+                        'X-Attack-Type': 'syn_flood',  # Mark as SYN flood attack traffic
+                        'Connection': 'Incomplete'  # Simulate incomplete connection
                     }
                 ):
                     process_request()
+                
+                # Log every 15th request to avoid overwhelming the logs
+                if _ % 15 == 0:
+                    self.logger.info(f"Sent SYN flood attack request from {ip} ({_+1}/{num_syn_packets})")
             except Exception as e:
                 self.logger.error(f"Error sending simulated request: {str(e)}")
                 pass
             
-            time.sleep(0.01)
+            # Very small delay to simulate rapid SYN packet sending
+            time.sleep(0.002)
     
     def _distributed_attack(self, intensity, distribution):
         """
@@ -405,15 +419,16 @@ class AttackSimulator:
             intensity (int): Attack intensity (1-10)
             distribution (str): IP distribution pattern (ignored, always uses random IPs)
         """
-        # Always use random distribution for this attack type
-        num_requests = intensity * 7  # 7-70 requests
+        # A distributed attack always uses random IPs, regardless of the distribution parameter
+        num_requests = intensity * 8  # 8-80 requests
         
         for _ in range(num_requests):
             if self.stop_event.is_set():
                 break
             
-            # Always use random IPs for distributed attack
-            ip = self._generate_ip('random')
+            # Always use fully random IPs for distributed attacks
+            ip = f'{random.randint(1, 254)}.{random.randint(1, 254)}.' \
+                 f'{random.randint(1, 254)}.{random.randint(1, 254)}'
             
             # Random URL paths to simulate different targets
             paths = ['/login', '/api/data', '/search', '/user', '/admin', '/process_request']
@@ -451,86 +466,36 @@ class AttackSimulator:
         try:
             # First check if attack is running based on our thread
             if not self.is_running:
+                # Still return last attack parameters even when not running
+                # This helps maintain consistency between page navigation
                 return {
                     'is_running': False,
-                    'attack_type': None,
-                    'start_time': None,
-                    'intensity': None,
-                    'distribution': None,
-                    'duration': None
+                    'attack_type': self.attack_type,
+                    'start_time': self.attack_start_time.isoformat() if self.attack_start_time else None,
+                    'intensity': self.attack_intensity,
+                    'distribution': self.attack_distribution,
+                    'duration': self.attack_duration
                 }
             
-            # Use instance attributes if available
-            if hasattr(self, 'attack_type') and hasattr(self, 'attack_intensity'):
-                return {
-                    'is_running': True,
-                    'attack_type': getattr(self, 'attack_type', 'unknown'),
-                    'start_time': getattr(self, 'attack_start_time', datetime.utcnow()),
-                    'intensity': getattr(self, 'attack_intensity', 5),
-                    'distribution': getattr(self, 'attack_distribution', 'random'),
-                    'duration': getattr(self, 'attack_duration', 60)
-                }
-            
-            # Try to get from database with proper app context
-            if self.current_attack:
-                try:
-                    from app import app
-                    with app.app_context():
-                        from models import AttackLog
-                        
-                        # Refresh the attack log from database
-                        attack_id = self.current_attack.id
-                        attack_log = AttackLog.query.filter_by(id=attack_id).first()
-                        
-                        if not attack_log:
-                            self.is_running = False
-                            self.current_attack = None
-                            return {
-                                'is_running': False,
-                                'attack_type': None,
-                                'start_time': None,
-                                'intensity': None,
-                                'distribution': None,
-                                'duration': None
-                            }
-                        
-                        # Update our instance attributes
-                        self.attack_type = attack_log.attack_type
-                        self.attack_intensity = attack_log.intensity
-                        self.attack_distribution = attack_log.distribution
-                        self.attack_start_time = attack_log.start_time
-                        
-                        # Use refreshed attack log data
-                        return {
-                            'is_running': self.is_running,
-                            'attack_type': attack_log.attack_type,
-                            'start_time': attack_log.start_time,
-                            'intensity': attack_log.intensity,
-                            'distribution': attack_log.distribution,
-                            'duration': 60  # Default duration
-                        }
-                except Exception as e:
-                    self.logger.error(f"Error refreshing attack log: {str(e)}")
-            
-            # Fallback to safe defaults
+            # Attack is running, return all parameters
             return {
                 'is_running': True,
-                'attack_type': 'unknown',
-                'start_time': datetime.utcnow(),
-                'intensity': 5,
-                'distribution': 'random',
-                'duration': 60
+                'attack_type': self.attack_type or 'flooding',
+                'start_time': self.attack_start_time.isoformat() if self.attack_start_time else datetime.utcnow().isoformat(),
+                'intensity': self.attack_intensity or 5, 
+                'distribution': self.attack_distribution or 'random',
+                'duration': self.attack_duration or 60
             }
         except Exception as e:
             self.logger.error(f"Error getting attack status: {str(e)}")
             # Return safe defaults
             return {
-                'is_running': self.is_running if hasattr(self, 'is_running') else False,
-                'attack_type': 'unknown',
+                'is_running': False,
+                'attack_type': None,
                 'start_time': None,
-                'intensity': 5,
-                'distribution': 'random',
-                'duration': 60
+                'intensity': None,
+                'distribution': None,
+                'duration': None
             }
     
     def get_attack_types(self):

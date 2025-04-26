@@ -5,6 +5,10 @@ let attackTimer = null;
 let attackStartTime = null;
 let attackDuration = 0;
 
+// Get saved timer state from sessionStorage
+const savedAttackStartTime = sessionStorage.getItem('attackStartTime');
+const savedAttackDuration = sessionStorage.getItem('attackDuration');
+
 document.addEventListener('DOMContentLoaded', function() {
     console.log('Simulator initializing...');
     
