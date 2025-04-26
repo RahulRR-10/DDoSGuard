@@ -155,17 +155,100 @@ def simulate_attack():
 
 @app.route('/api/simulate/stop', methods=['POST'])
 def stop_simulation():
-    attack_simulator.stop_attack()
-    
-    # Call the mitigation cleanup to remove any simulation IP blocks
-    # This ensures that when a simulation stops, all blocked IPs are cleared
     try:
+        # Stop the attack simulation
+        attack_simulator.stop_attack()
+        
+        # Call the mitigation cleanup to remove any simulation IP blocks
+        # This ensures that when a simulation stops, all blocked IPs are cleared
         mitigation_system.cleanup()
         app.logger.info("Cleaned up simulation blocks after stopping attack")
-    except Exception as e:
-        app.logger.error(f"Error cleaning up after simulation: {str(e)}")
+        
+        # Clean up historical anomalies from the simulation
+        with app.app_context():
+            from models import AnomalyLog, TrafficMetrics, TrafficLog
+            from datetime import datetime, timedelta
+            import random
+            
+            # Get current time
+            now = datetime.utcnow()
+            
+            # Find and delete anomalies created in the last 5 minutes (likely from simulation)
+            recent_anomalies = AnomalyLog.query.filter(
+                AnomalyLog.timestamp > (now - timedelta(minutes=5))
+            ).all()
+            
+            if recent_anomalies:
+                app.logger.info(f"Cleaning up {len(recent_anomalies)} recent anomalies after simulation")
+                for anomaly in recent_anomalies:
+                    db.session.delete(anomaly)
+            
+            # Delete recent traffic metrics to reset graphs
+            recent_metrics = TrafficMetrics.query.filter(
+                TrafficMetrics.timestamp > (now - timedelta(minutes=5))
+            ).all()
+            
+            if recent_metrics:
+                app.logger.info(f"Cleaning up {len(recent_metrics)} recent traffic metrics after simulation")
+                for metric in recent_metrics:
+                    db.session.delete(metric)
+            
+            # Delete recent traffic logs that might be from simulation
+            recent_logs = TrafficLog.query.filter(
+                TrafficLog.timestamp > (now - timedelta(minutes=5))
+            ).all()
+            
+            if recent_logs:
+                app.logger.info(f"Cleaning up {len(recent_logs)} recent traffic logs after simulation")
+                for log in recent_logs:
+                    db.session.delete(log)
+                    
+            # Create new baseline normal traffic
+            normal_rps = random.uniform(1.5, 4.0)
+            normal_unique_ips = random.randint(10, 30)
+            normal_entropy = random.uniform(3.0, 4.0)
+            normal_burst = random.uniform(0.01, 0.1)
+            
+            # Add a few normal traffic metrics to establish a baseline
+            for i in range(10):
+                # Slight random variations in normal traffic
+                rps_variation = random.uniform(0.8, 1.2)
+                unique_ips_variation = random.uniform(0.9, 1.1)
+                entropy_variation = random.uniform(0.95, 1.05)
+                burst_variation = random.uniform(0.9, 1.1)
+                
+                # Create metrics slightly in the past (to establish timeline)
+                timestamp = now - timedelta(seconds=(10-i)*30)
+                
+                metric = TrafficMetrics(
+                    timestamp=timestamp,
+                    requests_per_second=normal_rps * rps_variation,
+                    unique_ips=int(normal_unique_ips * unique_ips_variation),
+                    entropy_value=normal_entropy * entropy_variation,
+                    burst_score=normal_burst * burst_variation
+                )
+                db.session.add(metric)
+            
+            # Commit all changes
+            db.session.commit()
+        
+        # Reset the traffic profiler's internal state
+        traffic_profiler.request_window = deque()
+        traffic_profiler.ip_counter = Counter()
+        traffic_profiler.request_count = 0
+        
+        return jsonify({'status': 'Attack simulation stopped and system reset to normal conditions'})
     
-    return jsonify({'status': 'Attack simulation stopped'})
+    except Exception as e:
+        app.logger.error(f"Error stopping attack simulation: {str(e)}")
+        try:
+            # If an error occurred during cleanup, make sure to roll back any pending transactions
+            with app.app_context():
+                db.session.rollback()
+        except Exception as inner_e:
+            app.logger.error(f"Error rolling back after simulation stop failure: {str(inner_e)}")
+            
+        return jsonify({'status': 'error', 'message': str(e)})
 
 @app.route('/api/simulate/status', methods=['GET'])
 def get_attack_status():
