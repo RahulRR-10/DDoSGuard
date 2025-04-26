@@ -44,6 +44,13 @@ document.addEventListener('DOMContentLoaded', function() {
         detailsContainer.parentNode.insertBefore(timerContainer, detailsContainer.nextSibling);
     }
     
+    // Log the session storage state for debugging
+    console.log('Session storage state on page load:', {
+        running: sessionStorage.getItem('attackRunning'),
+        startTime: sessionStorage.getItem('attackStartTime'),
+        duration: sessionStorage.getItem('attackDuration')
+    });
+    
     // Restore timer state if we have session data
     if (savedAttackStartTime && sessionStorage.getItem('attackRunning') === 'true') {
         // Convert ISO start time to Date
@@ -53,9 +60,12 @@ document.addEventListener('DOMContentLoaded', function() {
         if (savedAttackDuration) {
             attackDuration = parseInt(savedAttackDuration);
         }
+        
+        // Start the timer immediately instead of waiting for checkAttackStatus to complete
+        startAttackTimer();
     }
     
-    // Check if an attack is currently running
+    // Then check the server for the actual attack status (this will override session storage if needed)
     checkAttackStatus();
     
     // Set up regular status check
@@ -408,6 +418,17 @@ function startAttackTimer() {
     if (attackTimer) {
         clearInterval(attackTimer);
     }
+    
+    // Save attack start time and duration to session storage for persistence
+    sessionStorage.setItem('attackStartTime', attackStartTime.toISOString());
+    sessionStorage.setItem('attackDuration', attackDuration.toString());
+    sessionStorage.setItem('attackRunning', 'true');
+    
+    console.log('Timer started - saved to session storage:', {
+        startTime: sessionStorage.getItem('attackStartTime'),
+        duration: sessionStorage.getItem('attackDuration'),
+        running: sessionStorage.getItem('attackRunning')
+    });
     
     // Update timer display immediately
     updateTimerDisplay();
