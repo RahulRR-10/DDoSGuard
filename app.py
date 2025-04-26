@@ -1,5 +1,6 @@
 import os
 import logging
+import random
 from datetime import datetime, timedelta
 from flask import Flask, render_template, request, jsonify, redirect, url_for, flash
 from flask_sqlalchemy import SQLAlchemy
@@ -499,6 +500,82 @@ with app.app_context():
     except Exception as e:
         app.logger.error(f"Error cleaning up attack logs: {str(e)}")
         db.session.rollback()
+    
+    # Initialize with some default data if empty
+    if models.TrafficMetrics.query.count() == 0:
+        app.logger.info("Initializing database with default traffic metrics data")
+        
+        # Get current time
+        now = datetime.utcnow()
+        
+        # Create baseline normal traffic data for dashboard
+        normal_rps = random.uniform(2.0, 5.0)
+        normal_unique_ips = random.randint(15, 40)
+        normal_entropy = random.uniform(3.5, 4.5)
+        normal_burst = random.uniform(0.02, 0.15)
+        
+        # Add traffic metrics to establish a baseline
+        for i in range(60):  # 60 data points = 30 minutes of data
+            # Variations to create realistic traffic patterns
+            rps_variation = random.uniform(0.7, 1.3)
+            unique_ips_variation = random.uniform(0.85, 1.15)
+            entropy_variation = random.uniform(0.92, 1.08)
+            burst_variation = random.uniform(0.8, 1.2)
+            
+            timestamp = now - timedelta(seconds=(60-i)*30)
+            
+            metric = models.TrafficMetrics(
+                timestamp=timestamp,
+                requests_per_second=normal_rps * rps_variation,
+                unique_ips=int(normal_unique_ips * unique_ips_variation),
+                entropy_value=normal_entropy * entropy_variation,
+                burst_score=normal_burst * burst_variation
+            )
+            db.session.add(metric)
+            
+            # Also add some baseline anomaly data with very low scores
+            if i % 5 == 0:  # Add anomaly data every 5th point
+                anomaly = models.AnomalyLog(
+                    timestamp=timestamp,
+                    anomaly_score=random.uniform(0.01, 0.06),  # Very low scores for normal traffic
+                    entropy_value=normal_entropy * entropy_variation,
+                    burst_score=normal_burst * burst_variation * 0.5,
+                    unique_ips=int(normal_unique_ips * unique_ips_variation),
+                    total_requests=int((normal_rps * rps_variation) * 60)
+                )
+                db.session.add(anomaly)
+        
+        # Add some sample attack history if none exists
+        if models.AttackLog.query.count() == 0:
+            app.logger.info("Adding sample attack history to database")
+            
+            # Add a few different attack types for demonstration
+            attack_types = ["flooding", "pulsing", "slowloris", "syn_flood", "distributed"]
+            distributions = ["random", "subnet", "fixed"]
+            
+            # Add some historical attacks
+            for i in range(5):
+                hours_ago = random.randint(2, 48)
+                duration_minutes = random.randint(1, 20)
+                start_time = now - timedelta(hours=hours_ago)
+                end_time = start_time + timedelta(minutes=duration_minutes)
+                attack_type = attack_types[i % len(attack_types)]
+                intensity = random.randint(3, 9)
+                distribution = distributions[i % len(distributions)]
+                
+                attack = models.AttackLog(
+                    start_time=start_time,
+                    end_time=end_time,
+                    attack_type=attack_type,
+                    intensity=intensity,
+                    distribution=distribution,
+                    is_active=False
+                )
+                db.session.add(attack)
+        
+        # Commit all the initial data
+        db.session.commit()
+        app.logger.info("Database initialization complete")
 
 if __name__ == '__main__':
     app.run(host='0.0.0.0', port=5000, debug=True)
