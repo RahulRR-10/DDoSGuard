@@ -43,7 +43,7 @@ function loadAttackHistory() {
     // Force a delay to ensure any previous attack simulation has been properly recorded
     setTimeout(() => {
         // Add a timestamp to prevent caching
-        const url = '/api/simulate/attack/history?_t=' + new Date().getTime();
+        const url = '/get_attack_history?_t=' + new Date().getTime();
         
         fetch(url)
             .then(response => {
@@ -207,335 +207,475 @@ function updateAttackHistoryTable(attacks) {
 }
 
 function updateAttackCharts(attacks) {
-    // Extract data for charts
-    const attackTypes = {};
-    const intensityData = [];
-    const distributionData = {};
-    const timelineData = [];
-    
-    // Calculate metrics for the report summary
-    let totalAttacks = attacks.length;
-    let avgIntensity = 0;
-    let avgDuration = 0;
-    let highIntensityAttacks = 0;
-    
-    if (totalAttacks > 0) {
-        // Calculate detection and mitigation rates
-        const detectionRate = Math.round(Math.min(98 + (totalAttacks * 0.2), 99.8) * 10) / 10;
-        document.getElementById('detectionRate').textContent = detectionRate + '%';
+    try {
+        // Extract data for charts
+        const attackTypes = {};
+        const intensityData = [];
+        const distributionData = {};
+        const timelineData = [];
         
-        const mitigationRate = Math.round(Math.min(95 + (totalAttacks * 0.3), 99.5) * 10) / 10;
-        document.getElementById('mitigationSuccess').textContent = mitigationRate + '%';
+        // Calculate metrics for the report summary
+        let totalAttacks = attacks.length;
+        let avgIntensity = 0;
+        let avgDuration = 0;
+        let highIntensityAttacks = 0;
         
-        // Calculate average response time based on attack intensity (lower for higher intensity)
-        const totalIntensity = attacks.reduce((sum, attack) => sum + attack.intensity, 0);
-        avgIntensity = totalIntensity / totalAttacks;
+        // Update dashboard statistics
+        if (totalAttacks > 0) {
+            try {
+                // Calculate detection and mitigation rates
+                const detectionRate = Math.round(Math.min(98 + (totalAttacks * 0.2), 99.8) * 10) / 10;
+                const detectionRateEl = document.getElementById('detectionRate');
+                if (detectionRateEl) {
+                    detectionRateEl.textContent = detectionRate + '%';
+                }
+                
+                const mitigationRate = Math.round(Math.min(95 + (totalAttacks * 0.3), 99.5) * 10) / 10;
+                const mitigationRateEl = document.getElementById('mitigationSuccess');
+                if (mitigationRateEl) {
+                    mitigationRateEl.textContent = mitigationRate + '%';
+                }
+                
+                // Calculate average response time based on attack intensity (lower for higher intensity)
+                const totalIntensity = attacks.reduce((sum, attack) => sum + (attack.intensity || 0), 0);
+                avgIntensity = totalIntensity / totalAttacks;
+                
+                // Higher intensity = faster response time
+                const responseTime = (1 - (avgIntensity / 12)).toFixed(2);
+                const responseTimeEl = document.getElementById('avgResponseTime');
+                if (responseTimeEl) {
+                    responseTimeEl.textContent = responseTime + 's';
+                }
+            } catch (err) {
+                console.error('Error updating statistics:', err);
+            }
+        }
         
-        // Higher intensity = faster response time
-        const responseTime = (1 - (avgIntensity / 12)).toFixed(2);
-        document.getElementById('avgResponseTime').textContent = responseTime + 's';
+        // Process each attack
+        attacks.forEach(attack => {
+            try {
+                const attackType = attack.attack_type || 'unknown';
+                const distribution = attack.distribution || 'unknown';
+                const intensity = attack.intensity || 5; // Default if missing
+                const id = attack.id || 'unknown';
+                
+                // Count attack types
+                if (attackTypes[attackType]) {
+                    attackTypes[attackType]++;
+                } else {
+                    attackTypes[attackType] = 1;
+                }
+                
+                // Collect intensity data
+                intensityData.push({
+                    id: id,
+                    type: attackType,
+                    intensity: intensity
+                });
+                
+                // Count high intensity attacks (7+)
+                if (intensity >= 7) {
+                    highIntensityAttacks++;
+                }
+                
+                // Count distribution types
+                if (distributionData[distribution]) {
+                    distributionData[distribution]++;
+                } else {
+                    distributionData[distribution] = 1;
+                }
+                
+                // Timeline data
+                let startTime = new Date();
+                let endTime = new Date();
+                
+                try {
+                    startTime = attack.start_time ? new Date(attack.start_time) : new Date();
+                    endTime = attack.end_time ? new Date(attack.end_time) : new Date();
+                } catch (e) {
+                    console.error('Error parsing date:', e);
+                }
+                
+                timelineData.push({
+                    id: id,
+                    type: attackType,
+                    start: startTime,
+                    end: endTime,
+                    intensity: intensity
+                });
+                
+                // Calculate duration for completed attacks
+                if (attack.start_time && attack.end_time) {
+                    try {
+                        const start = new Date(attack.start_time);
+                        const end = new Date(attack.end_time);
+                        avgDuration += (end - start) / 1000; // duration in seconds
+                    } catch (e) {
+                        console.error('Error calculating duration:', e);
+                    }
+                }
+            } catch (err) {
+                console.error('Error processing attack data:', err);
+            }
+        });
+        
+        console.log('Processed attack data for charts:', {
+            attackTypes: Object.keys(attackTypes).length,
+            intensityData: intensityData.length,
+            distributionData: Object.keys(distributionData).length,
+            timelineData: timelineData.length
+        });
+        
+        // Update individual charts with try/catch for each
+        try {
+            updateAttackTypesChart(attackTypes);
+        } catch (e) {
+            console.error('Error updating attack types chart:', e);
+        }
+        
+        try {
+            updateIntensityChart(intensityData);
+        } catch (e) {
+            console.error('Error updating intensity chart:', e);
+        }
+        
+        try {
+            updateDistributionChart(distributionData);
+        } catch (e) {
+            console.error('Error updating distribution chart:', e);
+        }
+        
+        try {
+            updateTimelineChart(timelineData);
+        } catch (e) {
+            console.error('Error updating timeline chart:', e);
+        }
+    } catch (error) {
+        console.error('Error in updateAttackCharts:', error);
     }
-    
-    attacks.forEach(attack => {
-        // Count attack types
-        if (attackTypes[attack.attack_type]) {
-            attackTypes[attack.attack_type]++;
-        } else {
-            attackTypes[attack.attack_type] = 1;
-        }
-        
-        // Collect intensity data
-        intensityData.push({
-            id: attack.id,
-            type: attack.attack_type,
-            intensity: attack.intensity
-        });
-        
-        // Count high intensity attacks (7+)
-        if (attack.intensity >= 7) {
-            highIntensityAttacks++;
-        }
-        
-        // Count distribution types
-        if (distributionData[attack.distribution]) {
-            distributionData[attack.distribution]++;
-        } else {
-            distributionData[attack.distribution] = 1;
-        }
-        
-        // Timeline data
-        timelineData.push({
-            id: attack.id,
-            type: attack.attack_type,
-            start: new Date(attack.start_time),
-            end: attack.end_time ? new Date(attack.end_time) : new Date(),
-            intensity: attack.intensity
-        });
-        
-        // Calculate duration for completed attacks
-        if (attack.start_time && attack.end_time) {
-            const start = new Date(attack.start_time);
-            const end = new Date(attack.end_time);
-            avgDuration += (end - start) / 1000; // duration in seconds
-        }
-    });
-    
-    // Update the attack types chart
-    updateAttackTypesChart(attackTypes);
-    
-    // Update the intensity chart
-    updateIntensityChart(intensityData);
-    
-    // Update the distribution chart
-    updateDistributionChart(distributionData);
-    
-    // Update the timeline chart
-    updateTimelineChart(timelineData);
 }
 
 function updateAttackTypesChart(attackTypes) {
-    const ctx = document.getElementById('attackTypesChart').getContext('2d');
-    
-    // Convert data to chart format
-    const labels = Object.keys(attackTypes);
-    const data = Object.values(attackTypes);
-    
-    // Generate colors
-    const colors = generateColors(labels.length);
-    
-    // Create or update chart
-    if (window.attackTypesChart) {
-        window.attackTypesChart.data.labels = labels;
-        window.attackTypesChart.data.datasets[0].data = data;
-        window.attackTypesChart.data.datasets[0].backgroundColor = colors;
-        window.attackTypesChart.update();
-    } else {
-        window.attackTypesChart = new Chart(ctx, {
-            type: 'pie',
-            data: {
-                labels: labels,
-                datasets: [{
-                    data: data,
-                    backgroundColor: colors,
-                    borderWidth: 1
-                }]
-            },
-            options: {
-                responsive: true,
-                maintainAspectRatio: false,
-                plugins: {
-                    legend: {
-                        position: 'right',
-                    },
-                    title: {
-                        display: true,
-                        text: 'Attack Types Distribution'
+    try {
+        const canvas = document.getElementById('attackTypesChart');
+        if (!canvas) {
+            console.error('Attack types chart canvas not found');
+            return;
+        }
+        
+        const ctx = canvas.getContext('2d');
+        
+        // Convert data to chart format
+        const labels = Object.keys(attackTypes);
+        const data = Object.values(attackTypes);
+        
+        // Generate colors
+        const colors = generateColors(labels.length);
+        
+        // Create or update chart
+        if (window.attackTypesChart && window.attackTypesChart.data) {
+            // Safely update existing chart
+            window.attackTypesChart.data.labels = labels;
+            window.attackTypesChart.data.datasets[0].data = data;
+            window.attackTypesChart.data.datasets[0].backgroundColor = colors;
+            window.attackTypesChart.update();
+        } else {
+            // Destroy if exists but corrupted
+            if (window.attackTypesChart) {
+                window.attackTypesChart.destroy();
+            }
+            
+            // Create new chart
+            window.attackTypesChart = new Chart(ctx, {
+                type: 'pie',
+                data: {
+                    labels: labels,
+                    datasets: [{
+                        data: data,
+                        backgroundColor: colors,
+                        borderWidth: 1
+                    }]
+                },
+                options: {
+                    responsive: true,
+                    maintainAspectRatio: false,
+                    plugins: {
+                        legend: {
+                            position: 'right',
+                        },
+                        title: {
+                            display: true,
+                            text: 'Attack Types Distribution'
+                        }
                     }
                 }
-            }
-        });
+            });
+        }
+    } catch (error) {
+        console.error('Error updating attack types chart:', error);
     }
 }
 
 function updateIntensityChart(intensityData) {
-    const ctx = document.getElementById('intensityChart').getContext('2d');
-    
-    // Sort by intensity
-    intensityData.sort((a, b) => b.intensity - a.intensity);
-    
-    // Take only top 10
-    const topData = intensityData.slice(0, 10);
-    
-    // Extract data for chart
-    const labels = topData.map(item => `${formatAttackType(item.type)} (ID: ${item.id})`);
-    const data = topData.map(item => item.intensity);
-    
-    // Generate colors based on intensity
-    const colors = data.map(intensity => getIntensityColor(intensity));
-    
-    // Create or update chart
-    if (window.intensityChart) {
-        window.intensityChart.data.labels = labels;
-        window.intensityChart.data.datasets[0].data = data;
-        window.intensityChart.data.datasets[0].backgroundColor = colors;
-        window.intensityChart.update();
-    } else {
-        window.intensityChart = new Chart(ctx, {
-            type: 'bar',
-            data: {
-                labels: labels,
-                datasets: [{
-                    label: 'Intensity Level',
-                    data: data,
-                    backgroundColor: colors,
-                    borderColor: colors.map(color => color.replace('0.7', '1')),
-                    borderWidth: 1
-                }]
-            },
-            options: {
-                indexAxis: 'y',
-                responsive: true,
-                maintainAspectRatio: false,
-                scales: {
-                    x: {
-                        beginAtZero: true,
-                        max: 10,
-                        title: {
-                            display: true,
-                            text: 'Intensity Level (1-10)'
-                        }
-                    },
-                    y: {
-                        title: {
-                            display: true,
-                            text: 'Attack ID'
-                        }
-                    }
+    try {
+        const canvas = document.getElementById('intensityChart');
+        if (!canvas) {
+            console.error('Intensity chart canvas not found');
+            return;
+        }
+        
+        const ctx = canvas.getContext('2d');
+        
+        // Sort by intensity
+        intensityData.sort((a, b) => b.intensity - a.intensity);
+        
+        // Take only top 10
+        const topData = intensityData.slice(0, 10);
+        
+        // Extract data for chart
+        const labels = topData.map(item => `${formatAttackType(item.type)} (ID: ${item.id})`);
+        const data = topData.map(item => item.intensity);
+        
+        // Generate colors based on intensity
+        const colors = data.map(intensity => getIntensityColor(intensity));
+        
+        // Create or update chart
+        if (window.intensityChart && window.intensityChart.data) {
+            // Safely update existing chart
+            window.intensityChart.data.labels = labels;
+            window.intensityChart.data.datasets[0].data = data;
+            window.intensityChart.data.datasets[0].backgroundColor = colors;
+            window.intensityChart.update();
+        } else {
+            // Destroy if exists but corrupted
+            if (window.intensityChart) {
+                window.intensityChart.destroy();
+            }
+            
+            // Create new chart
+            window.intensityChart = new Chart(ctx, {
+                type: 'bar',
+                data: {
+                    labels: labels,
+                    datasets: [{
+                        label: 'Intensity Level',
+                        data: data,
+                        backgroundColor: colors,
+                        borderColor: colors.map(color => color.replace('0.7', '1')),
+                        borderWidth: 1
+                    }]
                 },
-                plugins: {
-                    legend: {
-                        display: false
+                options: {
+                    indexAxis: 'y',
+                    responsive: true,
+                    maintainAspectRatio: false,
+                    scales: {
+                        x: {
+                            beginAtZero: true,
+                            max: 10,
+                            title: {
+                                display: true,
+                                text: 'Intensity Level (1-10)'
+                            }
+                        },
+                        y: {
+                            title: {
+                                display: true,
+                                text: 'Attack ID'
+                            }
+                        }
                     },
-                    title: {
-                        display: true,
-                        text: 'Attack Intensity Comparison'
+                    plugins: {
+                        legend: {
+                            display: false
+                        },
+                        title: {
+                            display: true,
+                            text: 'Attack Intensity Comparison'
+                        }
                     }
                 }
-            }
-        });
+            });
+        }
+    } catch (error) {
+        console.error('Error updating intensity chart:', error);
     }
 }
 
 function updateDistributionChart(distributionData) {
-    const ctx = document.getElementById('distributionChart').getContext('2d');
-    
-    // Convert data to chart format
-    const labels = Object.keys(distributionData);
-    const data = Object.values(distributionData);
-    
-    // Generate colors
-    const colors = [
-        'rgba(255, 99, 132, 0.7)',
-        'rgba(54, 162, 235, 0.7)',
-        'rgba(255, 206, 86, 0.7)',
-        'rgba(75, 192, 192, 0.7)',
-        'rgba(153, 102, 255, 0.7)'
-    ];
-    
-    // Create or update chart
-    if (window.distributionChart) {
-        window.distributionChart.data.labels = labels;
-        window.distributionChart.data.datasets[0].data = data;
-        window.distributionChart.update();
-    } else {
-        window.distributionChart = new Chart(ctx, {
-            type: 'polarArea',
-            data: {
-                labels: labels,
-                datasets: [{
-                    data: data,
-                    backgroundColor: colors.slice(0, labels.length),
-                    borderWidth: 1
-                }]
-            },
-            options: {
-                responsive: true,
-                maintainAspectRatio: false,
-                plugins: {
-                    legend: {
-                        position: 'right',
-                    },
-                    title: {
-                        display: true,
-                        text: 'Attack Distribution Methods'
+    try {
+        const canvas = document.getElementById('distributionChart');
+        if (!canvas) {
+            console.error('Distribution chart canvas not found');
+            return;
+        }
+        
+        const ctx = canvas.getContext('2d');
+        
+        // Convert data to chart format
+        const labels = Object.keys(distributionData);
+        const data = Object.values(distributionData);
+        
+        // Generate colors
+        const colors = [
+            'rgba(255, 99, 132, 0.7)',
+            'rgba(54, 162, 235, 0.7)',
+            'rgba(255, 206, 86, 0.7)',
+            'rgba(75, 192, 192, 0.7)',
+            'rgba(153, 102, 255, 0.7)'
+        ];
+        
+        // Create or update chart
+        if (window.distributionChart && window.distributionChart.data) {
+            // Safely update existing chart
+            window.distributionChart.data.labels = labels;
+            window.distributionChart.data.datasets[0].data = data;
+            window.distributionChart.update();
+        } else {
+            // Destroy if exists but corrupted
+            if (window.distributionChart) {
+                window.distributionChart.destroy();
+            }
+            
+            // Create new chart
+            window.distributionChart = new Chart(ctx, {
+                type: 'polarArea',
+                data: {
+                    labels: labels,
+                    datasets: [{
+                        data: data,
+                        backgroundColor: colors.slice(0, labels.length),
+                        borderWidth: 1
+                    }]
+                },
+                options: {
+                    responsive: true,
+                    maintainAspectRatio: false,
+                    plugins: {
+                        legend: {
+                            position: 'right',
+                        },
+                        title: {
+                            display: true,
+                            text: 'Attack Distribution Methods'
+                        }
                     }
                 }
-            }
-        });
+            });
+        }
+    } catch (error) {
+        console.error('Error updating distribution chart:', error);
     }
 }
 
 function updateTimelineChart(timelineData) {
-    const ctx = document.getElementById('timelineChart').getContext('2d');
-    
-    // Sort by start time
-    timelineData.sort((a, b) => a.start - b.start);
-    
-    // Only display the most recent 10 attacks
-    const recentData = timelineData.slice(-10);
-    
-    // Create datasets for each attack
-    const datasets = recentData.map(attack => {
-        const color = getIntensityColor(attack.intensity);
+    try {
+        const canvas = document.getElementById('timelineChart');
+        if (!canvas) {
+            console.error('Timeline chart canvas not found');
+            return;
+        }
         
-        return {
-            label: `${formatAttackType(attack.type)} (ID: ${attack.id})`,
-            data: [{
-                x: attack.start,
-                y: attack.intensity
-            }, {
-                x: attack.end,
-                y: attack.intensity
-            }],
-            borderColor: color,
-            backgroundColor: color.replace('0.7', '0.1'),
-            borderWidth: 2,
-            fill: false
-        };
-    });
-    
-    // Create or update chart
-    if (window.timelineChart) {
-        window.timelineChart.data.datasets = datasets;
-        window.timelineChart.update();
-    } else {
-        window.timelineChart = new Chart(ctx, {
-            type: 'line',
-            data: {
-                datasets: datasets
-            },
-            options: {
-                responsive: true,
-                maintainAspectRatio: false,
-                scales: {
-                    x: {
-                        type: 'time',
-                        time: {
-                            unit: 'minute',
-                            displayFormats: {
-                                minute: 'HH:mm'
-                            },
-                            tooltipFormat: 'YYYY-MM-DD HH:mm:ss'
-                        },
-                        title: {
-                            display: true,
-                            text: 'Time'
-                        }
-                    },
-                    y: {
-                        beginAtZero: true,
-                        max: 10,
-                        title: {
-                            display: true,
-                            text: 'Intensity'
-                        }
-                    }
+        const ctx = canvas.getContext('2d');
+        
+        // Sort by start time
+        timelineData.sort((a, b) => a.start - b.start);
+        
+        // Only display the most recent 10 attacks
+        const recentData = timelineData.slice(-10);
+        
+        // Create datasets for each attack
+        const datasets = recentData.map(attack => {
+            const color = getIntensityColor(attack.intensity);
+            
+            return {
+                label: `${formatAttackType(attack.type)} (ID: ${attack.id})`,
+                data: [{
+                    x: attack.start,
+                    y: attack.intensity
+                }, {
+                    x: attack.end,
+                    y: attack.intensity
+                }],
+                borderColor: color,
+                backgroundColor: color.replace('0.7', '0.1'),
+                borderWidth: 2,
+                fill: false
+            };
+        });
+        
+        // Create or update chart
+        if (window.timelineChart && window.timelineChart.data) {
+            // Safely update existing chart
+            window.timelineChart.data.datasets = datasets;
+            window.timelineChart.update();
+        } else {
+            // Destroy if exists but corrupted
+            if (window.timelineChart) {
+                window.timelineChart.destroy();
+            }
+            
+            // Create new chart
+            window.timelineChart = new Chart(ctx, {
+                type: 'line',
+                data: {
+                    datasets: datasets.length > 0 ? datasets : [{
+                        label: 'No Attack Data',
+                        data: [
+                            { x: new Date(Date.now() - 30*60000), y: 0 },
+                            { x: new Date(), y: 0 }
+                        ],
+                        borderColor: 'rgba(200, 200, 200, 0.7)',
+                        backgroundColor: 'rgba(200, 200, 200, 0.1)',
+                        borderWidth: 2,
+                        pointRadius: 0
+                    }]
                 },
-                plugins: {
-                    tooltip: {
-                        callbacks: {
-                            label: function(context) {
-                                return context.dataset.label + ' - Intensity: ' + context.parsed.y;
+                options: {
+                    responsive: true,
+                    maintainAspectRatio: false,
+                    scales: {
+                        x: {
+                            type: 'time',
+                            time: {
+                                unit: 'minute',
+                                displayFormats: {
+                                    minute: 'HH:mm'
+                                },
+                                tooltipFormat: 'YYYY-MM-DD HH:mm:ss'
+                            },
+                            title: {
+                                display: true,
+                                text: 'Time'
+                            }
+                        },
+                        y: {
+                            beginAtZero: true,
+                            max: 10,
+                            title: {
+                                display: true,
+                                text: 'Intensity'
                             }
                         }
                     },
-                    title: {
-                        display: true,
-                        text: 'Attack Timeline'
+                    plugins: {
+                        tooltip: {
+                            callbacks: {
+                                label: function(context) {
+                                    return context.dataset.label + ' - Intensity: ' + context.parsed.y;
+                                }
+                            }
+                        },
+                        title: {
+                            display: true,
+                            text: 'Attack Timeline'
+                        }
                     }
                 }
-            }
-        });
+            });
+        }
+    } catch (error) {
+        console.error('Error updating timeline chart:', error);
     }
 }
 
