@@ -191,37 +191,45 @@ def get_attack_history():
     try:
         from models import AttackLog
         
-        # Query completed attacks
-        completed_attacks = AttackLog.query.filter(
-            AttackLog.is_active == False,
-            AttackLog.end_time != None
-        ).order_by(AttackLog.start_time.desc()).limit(10).all()
+        # Query all attacks regardless of status to make sure we're getting data
+        all_attacks = AttackLog.query.order_by(AttackLog.start_time.desc()).limit(100).all()
         
-        # Query active attacks
-        active_attacks = AttackLog.query.filter(
-            AttackLog.is_active == True
-        ).order_by(AttackLog.start_time.desc()).all()
+        # Log what we found for debugging
+        app.logger.debug(f"Found {len(all_attacks)} total attack records in database")
         
-        # Combine and format results
-        attacks = active_attacks + completed_attacks
+        # Handle active and inactive attacks separately
+        active_attacks = []
+        completed_attacks = []
+        
+        for attack in all_attacks:
+            if attack.is_active:
+                active_attacks.append(attack)
+            elif attack.end_time is not None:
+                completed_attacks.append(attack)
+        
+        # Limited to 20 most recent attacks
+        attacks = active_attacks + completed_attacks[:20]
         
         result = []
         for attack in attacks:
-            result.append({
+            # Create a dictionary with all available attack data
+            attack_data = {
                 'id': attack.id,
                 'start_time': attack.start_time,
                 'end_time': attack.end_time,
-                'attack_type': attack.attack_type,
-                'intensity': attack.intensity,
-                'distribution': attack.distribution,
+                'attack_type': attack.attack_type or 'unknown',
+                'intensity': attack.intensity or 5,
+                'distribution': attack.distribution or 'random',
                 'is_active': attack.is_active
-            })
+            }
+            result.append(attack_data)
             
         app.logger.debug(f"Returning {len(result)} attack history records")
         return jsonify(result)
         
     except Exception as e:
         app.logger.error(f"Error getting attack history: {str(e)}")
+        # Return empty list to prevent frontend errors
         return jsonify([])
 
 @app.route('/api/settings/update', methods=['POST'])
