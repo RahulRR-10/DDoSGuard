@@ -106,6 +106,10 @@ def stop_simulation():
     attack_simulator.stop_attack()
     return jsonify({'status': 'Attack simulation stopped'})
 
+@app.route('/api/simulate/status', methods=['GET'])
+def get_attack_status():
+    return jsonify(attack_simulator.get_attack_status())
+
 @app.route('/api/settings/update', methods=['POST'])
 def update_settings():
     try:
