@@ -357,59 +357,80 @@ function updateAttackCharts(attacks) {
 
 function updateAttackTypesChart(attackTypes) {
     try {
+        console.log('Attempting to update attack types chart');
         const canvas = document.getElementById('attackTypesChart');
         if (!canvas) {
             console.error('Attack types chart canvas not found');
             return;
         }
         
-        const ctx = canvas.getContext('2d');
-        
-        // Convert data to chart format
-        const labels = Object.keys(attackTypes);
-        const data = Object.values(attackTypes);
-        
-        // Generate colors
-        const colors = generateColors(labels.length);
-        
-        // Create or update chart
-        if (window.attackTypesChart && window.attackTypesChart.data) {
-            // Safely update existing chart
-            window.attackTypesChart.data.labels = labels;
-            window.attackTypesChart.data.datasets[0].data = data;
-            window.attackTypesChart.data.datasets[0].backgroundColor = colors;
-            window.attackTypesChart.update();
-        } else {
-            // Destroy if exists but corrupted
-            if (window.attackTypesChart) {
-                window.attackTypesChart.destroy();
+        console.log('Got canvas for attack types chart');
+        try {
+            const ctx = canvas.getContext('2d');
+            console.log('Got 2D context for attack types chart');
+            
+            // Check if Chart is defined
+            if (typeof Chart === 'undefined') {
+                console.error('Chart.js is not defined - library may not be loaded properly');
+                return;
             }
             
-            // Create new chart
-            window.attackTypesChart = new Chart(ctx, {
-                type: 'pie',
-                data: {
-                    labels: labels,
-                    datasets: [{
-                        data: data,
-                        backgroundColor: colors,
-                        borderWidth: 1
-                    }]
-                },
-                options: {
-                    responsive: true,
-                    maintainAspectRatio: false,
-                    plugins: {
-                        legend: {
-                            position: 'right',
-                        },
-                        title: {
-                            display: true,
-                            text: 'Attack Types Distribution'
+            console.log('Chart.js is defined, continuing...');
+            
+            // Convert data to chart format
+            const labels = Object.keys(attackTypes);
+            const data = Object.values(attackTypes);
+            
+            console.log('Attack types data prepared:', { labels, data });
+            
+            // Generate colors
+            const colors = generateColors(labels.length);
+            
+            // Create or update chart
+            if (window.attackTypesChart && window.attackTypesChart.data) {
+                console.log('Updating existing attack types chart');
+                // Safely update existing chart
+                window.attackTypesChart.data.labels = labels;
+                window.attackTypesChart.data.datasets[0].data = data;
+                window.attackTypesChart.data.datasets[0].backgroundColor = colors;
+                window.attackTypesChart.update();
+            } else {
+                // Destroy if exists but corrupted
+                if (window.attackTypesChart) {
+                    console.log('Destroying corrupted attack types chart');
+                    window.attackTypesChart.destroy();
+                }
+                
+                console.log('Creating new attack types chart');
+                // Create new chart
+                window.attackTypesChart = new Chart(ctx, {
+                    type: 'pie',
+                    data: {
+                        labels: labels,
+                        datasets: [{
+                            data: data,
+                            backgroundColor: colors,
+                            borderWidth: 1
+                        }]
+                    },
+                    options: {
+                        responsive: true,
+                        maintainAspectRatio: false,
+                        plugins: {
+                            legend: {
+                                position: 'right',
+                            },
+                            title: {
+                                display: true,
+                                text: 'Attack Types Distribution'
+                            }
                         }
                     }
-                }
-            });
+                });
+                console.log('New attack types chart created');
+            }
+        } catch (innerError) {
+            console.error('Error in chart context or drawing:', innerError);
         }
     } catch (error) {
         console.error('Error updating attack types chart:', error);
