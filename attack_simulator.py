@@ -28,6 +28,13 @@ class AttackSimulator:
         self.is_running = False
         self.current_attack = None
         
+        # Persistent attack parameters
+        self.attack_type = None
+        self.attack_duration = None
+        self.attack_intensity = None
+        self.attack_distribution = None
+        self.attack_start_time = None
+        
         self.logger.info("Attack Simulator initialized")
     
     def start_attack(self, attack_type='flooding', duration=60, intensity=5, distribution='random'):
