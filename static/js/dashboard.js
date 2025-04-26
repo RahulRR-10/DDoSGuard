@@ -394,16 +394,30 @@ function updateAnomalyData(data) {
     // Only use the most recent anomalies
     const recentAnomalies = data.slice(-MAX_DATA_POINTS);
     
-    // Clear existing data
-    anomalyData.labels = [];
-    anomalyData.scores = [];
-    
-    // Process anomaly data
-    recentAnomalies.forEach(anomaly => {
-        const timestamp = new Date(anomaly.timestamp).toLocaleTimeString();
-        anomalyData.labels.push(timestamp);
-        anomalyData.scores.push(anomaly.anomaly_score);
-    });
+    if (recentAnomalies.length > 0) {
+        // Get timestamps and scores from new data
+        const newTimestamps = recentAnomalies.map(anomaly => 
+            new Date(anomaly.timestamp).toLocaleTimeString());
+        const newScores = recentAnomalies.map(anomaly => 
+            anomaly.anomaly_score);
+            
+        // Check if we have new data by looking at the latest timestamp
+        const latestTimestamp = newTimestamps[newTimestamps.length - 1];
+        const existingLastIndex = anomalyData.labels.indexOf(latestTimestamp);
+        
+        if (existingLastIndex === -1) {
+            // Merge with existing data, avoiding duplicates
+            anomalyData.labels = [...anomalyData.labels, ...newTimestamps];
+            anomalyData.scores = [...anomalyData.scores, ...newScores];
+            
+            // Keep only the most recent MAX_DATA_POINTS
+            if (anomalyData.labels.length > MAX_DATA_POINTS) {
+                const removeCount = anomalyData.labels.length - MAX_DATA_POINTS;
+                anomalyData.labels = anomalyData.labels.slice(removeCount);
+                anomalyData.scores = anomalyData.scores.slice(removeCount);
+            }
+        }
+    }
     
     // Update anomaly chart
     anomalyChart.data.labels = anomalyData.labels;
@@ -411,7 +425,7 @@ function updateAnomalyData(data) {
     anomalyChart.update();
     
     // Update threat level indicator
-    updateThreatLevel(recentAnomalies);
+    updateThreatLevel(recentAnomalies.length > 0 ? recentAnomalies : data);
 }
 
 function processTrafficHistory(data) {
@@ -421,27 +435,60 @@ function processTrafficHistory(data) {
         return;
     }
     
-    // Instead of using the missing ip_counts field, 
-    // we'll fetch the actual IP counts from our backend separately
-    // For now, we'll use the traffic data for the charts
-    
-    // Update traffic chart with extended data
+    // Process the historical data
     const timestamps = data.map(entry => new Date(entry.timestamp).toLocaleTimeString());
     const requests = data.map(entry => entry.requests_per_second);
     const uniqueIps = data.map(entry => entry.unique_ips);
+    const entropyValues = data.map(entry => entry.entropy_value);
+    const burstScores = data.map(entry => entry.burst_score);
     
-    // Only take the last MAX_DATA_POINTS
+    // Only take the most recent MAX_DATA_POINTS
     const sliceStart = Math.max(0, timestamps.length - MAX_DATA_POINTS);
     
-    trafficChart.data.labels = timestamps.slice(sliceStart);
-    trafficChart.data.datasets[0].data = requests.slice(sliceStart);
-    trafficChart.data.datasets[1].data = uniqueIps.slice(sliceStart);
+    // Update our persistent data storage
+    // This ensures that data persists between refreshes
+    if (timestamps.length > 0) {
+        // Merge with existing data, avoiding duplicates
+        const latestTimestamp = timestamps[timestamps.length - 1];
+        const existingLastIndex = trafficData.labels.indexOf(latestTimestamp);
+        
+        if (existingLastIndex === -1) {
+            // New data, append it
+            trafficData.labels = [...trafficData.labels, ...timestamps.slice(sliceStart)];
+            trafficData.requests = [...trafficData.requests, ...requests.slice(sliceStart)];
+            trafficData.uniqueIPs = [...trafficData.uniqueIPs, ...uniqueIps.slice(sliceStart)];
+            
+            entropyData.labels = [...entropyData.labels, ...timestamps.slice(sliceStart)];
+            entropyData.values = [...entropyData.values, ...entropyValues.slice(sliceStart)];
+            entropyData.bursts = [...entropyData.bursts, ...burstScores.slice(sliceStart)];
+            
+            // Keep only the latest MAX_DATA_POINTS
+            if (trafficData.labels.length > MAX_DATA_POINTS) {
+                const removeCount = trafficData.labels.length - MAX_DATA_POINTS;
+                trafficData.labels = trafficData.labels.slice(removeCount);
+                trafficData.requests = trafficData.requests.slice(removeCount);
+                trafficData.uniqueIPs = trafficData.uniqueIPs.slice(removeCount);
+                
+                entropyData.labels = entropyData.labels.slice(removeCount);
+                entropyData.values = entropyData.values.slice(removeCount);
+                entropyData.bursts = entropyData.bursts.slice(removeCount);
+            }
+        } else {
+            // We already have this data, no need to append
+            console.log("Data already in chart, not appending duplicates");
+        }
+    }
+    
+    // Update traffic chart with our persistent data
+    trafficChart.data.labels = trafficData.labels;
+    trafficChart.data.datasets[0].data = trafficData.requests;
+    trafficChart.data.datasets[1].data = trafficData.uniqueIPs;
     trafficChart.update();
     
-    // Update the entropy chart too
-    entropyChart.data.labels = timestamps.slice(sliceStart);
-    entropyChart.data.datasets[0].data = data.map(entry => entry.entropy_value).slice(sliceStart);
-    entropyChart.data.datasets[1].data = data.map(entry => entry.burst_score).slice(sliceStart);
+    // Update the entropy chart with persistent data
+    entropyChart.data.labels = entropyData.labels;
+    entropyChart.data.datasets[0].data = entropyData.values;
+    entropyChart.data.datasets[1].data = entropyData.bursts;
     entropyChart.update();
     
     // For IP chart, we need to get data from the backend

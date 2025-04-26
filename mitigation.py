@@ -159,13 +159,30 @@ class MitigationSystem:
         Returns:
             str: Action taken ('block')
         """
+        # Determine if this is a simulated attack IP
+        is_simulation = ip_address.startswith('192.168.') or '.' in ip_address and len(ip_address.split('.')) == 4 and any(x in ip_address for x in ['10.', '172.16.', '192.168.'])
+        
         # Determine block duration based on severity
         duration = None
         if severity == 'light':
             duration = timedelta(minutes=10)
         elif severity == 'medium':
             duration = timedelta(hours=1)
-        # 'severe' has no duration (permanent block)
+        # 'severe' has no duration (permanent block) for real traffic
+        
+        # For simulated attacks, always set a short expiration to auto-cleanup
+        if is_simulation:
+            # For simulations, always use a shorter duration so they auto-expire quickly
+            if severity == 'severe':
+                duration = timedelta(minutes=5)  # 5 minutes for severe simulation attacks
+            elif severity == 'medium':
+                duration = timedelta(minutes=3)  # 3 minutes for medium simulation attacks
+            elif severity == 'light':
+                duration = timedelta(minutes=1)  # 1 minute for light simulation attacks
+                
+            # Even if severity is 'severe', set an expiration for simulation IPs
+            # This ensures they'll be unblocked automatically when simulation stops
+            self.logger.info(f"Using shorter block duration for simulation IP {ip_address}")
         
         # Calculate expiration time
         expiration = datetime.utcnow() + duration if duration else None
@@ -186,14 +203,14 @@ class MitigationSystem:
                 existing_block.blocked_at = datetime.utcnow()
                 existing_block.severity = severity
                 existing_block.expiration = expiration
-                existing_block.reason = f"Anomaly score: {self.ip_scores[ip_address]:.2f}"
+                existing_block.reason = f"Anomaly score: {self.ip_scores[ip_address]:.2f}" + (" (Simulation)" if is_simulation else "")
             else:
                 # Create new record
                 block_entry = BlockedIP(
                     ip_address=ip_address,
                     severity=severity,
                     expiration=expiration,
-                    reason=f"Anomaly score: {self.ip_scores[ip_address]:.2f}"
+                    reason=f"Anomaly score: {self.ip_scores[ip_address]:.2f}" + (" (Simulation)" if is_simulation else "")
                 )
                 db.session.add(block_entry)
             
@@ -319,13 +336,60 @@ class MitigationSystem:
                 BlockedIP.expiration < current_time
             ).all()
             
-            for block in expired_blocks:
+            # Check if there are any active attack simulations
+            from app import attack_simulator
+            simulation_active = attack_simulator.get_attack_status()['is_running']
+            
+            # If simulation is not running, also clean up simulation IPs
+            simulation_blocks = []
+            if not simulation_active:
+                # Find all blocks that have "Simulation" in the reason
+                simulation_blocks = BlockedIP.query.filter(
+                    BlockedIP.reason.contains("Simulation")
+                ).all()
+                
+                # Add any blocks with simulation IP patterns (192.168.*, 10.*, etc.)
+                # Private IP blocks often used in simulations
+                for ip_pattern in ['192.168.', '10.', '172.16.']:
+                    private_ip_blocks = BlockedIP.query.filter(
+                        BlockedIP.ip_address.startswith(ip_pattern)
+                    ).all()
+                    
+                    # Add to simulation blocks if not already there
+                    for block in private_ip_blocks:
+                        if block not in simulation_blocks:
+                            simulation_blocks.append(block)
+                
+                if simulation_blocks:
+                    self.logger.info(f"Cleaning up {len(simulation_blocks)} simulation IP blocks because no simulation is running")
+            
+            # Combine all blocks to delete
+            all_blocks_to_delete = expired_blocks + simulation_blocks
+            
+            # Delete all the blocks
+            for block in all_blocks_to_delete:
                 db.session.delete(block)
             
             db.session.commit()
             
-            if expired_blocks:
-                self.logger.info(f"Cleaned up {len(expired_blocks)} expired IP blocks")
+            # Log the cleanup
+            if all_blocks_to_delete:
+                self.logger.info(f"Cleaned up {len(all_blocks_to_delete)} IP blocks")
+                
+            # Also reset rate limits for simulation IPs if no simulation is running
+            if not simulation_active:
+                simulation_ips = [ip for ip in self.rate_limits.keys() if 
+                                 ip.startswith('192.168.') or 
+                                 ip.startswith('10.') or 
+                                 ip.startswith('172.16.')]
+                                 
+                for ip in simulation_ips:
+                    del self.rate_limits[ip]
+                    if ip in self.ip_scores:
+                        del self.ip_scores[ip]
+                
+                if simulation_ips:
+                    self.logger.info(f"Reset rate limits for {len(simulation_ips)} simulation IPs")
         
         except Exception as e:
             self.logger.error(f"Error cleaning up expired blocks: {str(e)}")

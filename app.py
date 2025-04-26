@@ -156,6 +156,15 @@ def simulate_attack():
 @app.route('/api/simulate/stop', methods=['POST'])
 def stop_simulation():
     attack_simulator.stop_attack()
+    
+    # Call the mitigation cleanup to remove any simulation IP blocks
+    # This ensures that when a simulation stops, all blocked IPs are cleared
+    try:
+        mitigation_system.cleanup()
+        app.logger.info("Cleaned up simulation blocks after stopping attack")
+    except Exception as e:
+        app.logger.error(f"Error cleaning up after simulation: {str(e)}")
+    
     return jsonify({'status': 'Attack simulation stopped'})
 
 @app.route('/api/simulate/status', methods=['GET'])
