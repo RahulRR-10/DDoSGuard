@@ -146,12 +146,25 @@ class AttackSimulator:
             # Update the attack log with the duration
             if self.current_attack:
                 try:
-                    self.current_attack.end_time = datetime.utcnow() + timedelta(seconds=duration)
-                    db.session.commit()
-                    self.logger.info(f"Updated attack log with duration: {duration}s")
+                    from app import app
+                    with app.app_context():
+                        from models import AttackLog
+                        
+                        # Get fresh instance to avoid detached instance issues
+                        attack_id = self.current_attack.id
+                        attack_log = AttackLog.query.get(attack_id)
+                        if attack_log:
+                            attack_log.end_time = datetime.utcnow() + timedelta(seconds=duration)
+                            db.session.commit()
+                            self.logger.info(f"Updated attack log with duration: {duration}s")
                 except Exception as e:
                     self.logger.error(f"Error updating attack log duration: {str(e)}")
-                    db.session.rollback()
+                    try:
+                        from app import app
+                        with app.app_context():
+                            db.session.rollback()
+                    except:
+                        self.logger.error("Could not rollback session")
             
             # Run the attack
             attack_iteration = 0
@@ -177,12 +190,25 @@ class AttackSimulator:
             # Ensure the attack log is properly marked as completed
             if self.current_attack:
                 try:
-                    self.current_attack.end_time = datetime.utcnow()
-                    self.current_attack.is_active = False
-                    db.session.commit()
+                    from app import app
+                    with app.app_context():
+                        from models import AttackLog
+                        
+                        attack_id = self.current_attack.id
+                        attack_log = AttackLog.query.get(attack_id)
+                        if attack_log:
+                            attack_log.end_time = datetime.utcnow()
+                            attack_log.is_active = False
+                            db.session.commit()
+                            self.logger.info(f"Successfully finalized attack log ID {attack_id}")
                 except Exception as e:
                     self.logger.error(f"Error finalizing attack log: {str(e)}")
-                    db.session.rollback()
+                    try:
+                        from app import app
+                        with app.app_context():
+                            db.session.rollback()
+                    except:
+                        self.logger.error("Could not rollback session")
     
     def _generate_ip(self, distribution):
         """

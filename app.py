@@ -347,10 +347,23 @@ def process_request():
         'attack_type': attack_type
     })
 
-# Create database tables
+# Create database tables and clean up any lingering active attacks
 with app.app_context():
     import models
     db.create_all()
+    
+    # Clean up any attack logs that were left active (from previous runs)
+    try:
+        active_attacks = models.AttackLog.query.filter_by(is_active=True).all()
+        if active_attacks:
+            app.logger.info(f"Cleaning up {len(active_attacks)} active attack logs from previous runs")
+            for attack in active_attacks:
+                attack.is_active = False
+                attack.end_time = datetime.utcnow()
+            db.session.commit()
+    except Exception as e:
+        app.logger.error(f"Error cleaning up attack logs: {str(e)}")
+        db.session.rollback()
 
 if __name__ == '__main__':
     app.run(host='0.0.0.0', port=5000, debug=True)
