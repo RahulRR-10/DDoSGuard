@@ -575,8 +575,8 @@ function initializeHeapDemo() {
   const heapDisplay = document.getElementById('binary-heap-display');
   const heapLog = document.getElementById('heap-log');
   
-  // Min-heap implementation
-  class MinHeap {
+  // Max-heap implementation for threat prioritization
+  class MaxHeap {
     constructor() {
       this.heap = [];
     }
@@ -606,7 +606,7 @@ function initializeHeapDemo() {
       // Add element to the end
       this.heap.push(item);
       
-      // Fix the min heap property if violated (sift up)
+      // Fix the max heap property if violated (sift up)
       this.siftUp(this.heap.length - 1);
       
       return this.heap.length;
@@ -617,10 +617,10 @@ function initializeHeapDemo() {
       let currentIndex = i;
       let parentIndex = this.getParentIndex(currentIndex);
       
-      // While not at root and parent is greater than current
+      // While not at root and parent is LESS than current (MAX heap)
       while (
         currentIndex > 0 && 
-        this.heap[parentIndex].score > this.heap[currentIndex].score
+        this.heap[parentIndex].score < this.heap[currentIndex].score
       ) {
         // Swap with parent
         this.swap(parentIndex, currentIndex);
@@ -631,11 +631,11 @@ function initializeHeapDemo() {
       }
     }
     
-    // Extract the minimum element
-    extractMin() {
+    // Extract the maximum element
+    extractMax() {
       if (this.heap.length === 0) return null;
       
-      const min = this.heap[0];
+      const max = this.heap[0];
       const last = this.heap.pop();
       
       if (this.heap.length > 0) {
@@ -646,41 +646,41 @@ function initializeHeapDemo() {
         this.siftDown(0);
       }
       
-      return min;
+      return max;
     }
     
     // Sift down to maintain heap property
     siftDown(i) {
       let currentIndex = i;
-      let minIndex = i;
+      let maxIndex = i;
       const heapSize = this.heap.length;
       
       while (true) {
         const leftChildIndex = this.getLeftChildIndex(currentIndex);
         const rightChildIndex = this.getRightChildIndex(currentIndex);
         
-        // Check if left child is smaller
+        // Check if left child is LARGER (MAX heap)
         if (
           leftChildIndex < heapSize && 
-          this.heap[leftChildIndex].score < this.heap[minIndex].score
+          this.heap[leftChildIndex].score > this.heap[maxIndex].score
         ) {
-          minIndex = leftChildIndex;
+          maxIndex = leftChildIndex;
         }
         
-        // Check if right child is smaller
+        // Check if right child is LARGER (MAX heap)
         if (
           rightChildIndex < heapSize && 
-          this.heap[rightChildIndex].score < this.heap[minIndex].score
+          this.heap[rightChildIndex].score > this.heap[maxIndex].score
         ) {
-          minIndex = rightChildIndex;
+          maxIndex = rightChildIndex;
         }
         
         // If no change, heap property is satisfied
-        if (minIndex === currentIndex) break;
+        if (maxIndex === currentIndex) break;
         
-        // Swap with smaller child
-        this.swap(currentIndex, minIndex);
-        currentIndex = minIndex;
+        // Swap with larger child
+        this.swap(currentIndex, maxIndex);
+        currentIndex = maxIndex;
       }
     }
     
@@ -691,7 +691,7 @@ function initializeHeapDemo() {
   }
   
   // Create the heap
-  const heap = new MinHeap();
+  const heap = new MaxHeap();
   
   // Update visualization
   function updateHeap() {
@@ -821,22 +821,22 @@ function initializeHeapDemo() {
     }
   });
   
-  // Extract the min threat
+  // Extract the highest threat
   heapPopBtn.addEventListener('click', () => {
-    const min = heap.extractMin();
+    const max = heap.extractMax();
     
-    if (min) {
+    if (max) {
       // Log the action
       let level = 'below threshold';
-      if (min.score >= 0.8) {
+      if (max.score >= 0.8) {
         level = 'SEVERE (block)';
-      } else if (min.score >= 0.6) {
+      } else if (max.score >= 0.6) {
         level = 'MEDIUM (challenge)';
-      } else if (min.score >= 0.4) {
+      } else if (max.score >= 0.4) {
         level = 'LIGHT (rate limit)';
       }
       
-      logHeapAction(`Mitigated IP ${min.ip} with threat score ${min.score.toFixed(1)} (${level})`);
+      logHeapAction(`Mitigated IP ${max.ip} with threat score ${max.score.toFixed(1)} (${level})`);
       
       updateHeap();
     } else {
