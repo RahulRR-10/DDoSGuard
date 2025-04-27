@@ -301,6 +301,25 @@ function startDataRefresh() {
 }
 
 function refreshChartData() {
+    // Fetch anomalies and log for debugging
+    fetch('/api/anomalies')
+        .then(response => {
+            console.log('API response status:', response.status);
+            return response.json();
+        })
+        .then(data => {
+            console.log('Fetched anomalies from /api/anomalies:', data);
+            console.log('Number of anomalies:', data.length);
+            if (data.length > 0) {
+                console.log('First anomaly:', data[0]);
+                console.log('First anomaly timestamp type:', typeof data[0].timestamp);
+                console.log('First anomaly score type:', typeof data[0].anomaly_score);
+            }
+            updateAnomalyData(data);
+        })
+        .catch(error => {
+            console.error('Error fetching anomalies:', error);
+        });
     // Fetch current traffic data
     fetch('/api/traffic/current')
         .then(response => {
@@ -477,6 +496,7 @@ function updateTrafficData(data) {
 }
 
 function updateAnomalyData(data) {
+    console.log('updateAnomalyData called with:', data);
     // Only use the most recent anomalies
     const recentAnomalies = data.slice(-MAX_DATA_POINTS);
     
@@ -728,6 +748,8 @@ function updateBlockedIPs(data) {
 }
 
 function updateThreatLevel(anomalies) {
+    console.log('updateThreatLevel called with anomalies:', anomalies);
+    console.log('Number of anomalies passed to updateThreatLevel:', anomalies.length);
     const threatLevelElement = document.getElementById('threatLevel');
     const threatStatusElement = document.getElementById('threatStatus');
     
@@ -735,12 +757,19 @@ function updateThreatLevel(anomalies) {
     let maxScore = 0;
     if (anomalies.length > 0) {
         // Use the most recent anomaly scores (last 5)
-        const recentScores = anomalies.slice(-5).map(a => a.anomaly_score);
+        const recentScores = anomalies.slice(-5).map(a => {
+            console.log('Processing anomaly score:', a.anomaly_score, 'type:', typeof a.anomaly_score);
+            return a.anomaly_score;
+        });
+        console.log('Recent scores:', recentScores);
         maxScore = Math.max(...recentScores);
+        console.log('Max score calculated:', maxScore);
     }
     
     // Update threat meter
-    threatLevelElement.style.width = `${maxScore * 100}%`;
+    const widthPercentage = `${maxScore * 100}%`;
+    console.log('Setting threat bar width to:', widthPercentage);
+    threatLevelElement.style.width = widthPercentage;
     
     // Update status text and colors
     if (maxScore >= 0.8) {

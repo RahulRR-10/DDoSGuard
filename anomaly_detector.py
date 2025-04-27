@@ -85,11 +85,12 @@ class AnomalyDetector:
         
         # Add to history
         self.anomaly_history.append(anomaly_record)
-        
-        # Log to database if score is significant (to avoid filling the database)
-        if combined_score > 0.3:
+
+        # Always log simulated attack anomalies, log only high-score anomalies for normal traffic
+        is_simulation = metrics.get('is_simulation', False)
+        if is_simulation or combined_score > 0.3:
             self._log_anomaly(anomaly_record)
-        
+
         return combined_score
     
     def _entropy_based_detection(self, metrics):
@@ -226,12 +227,42 @@ class AnomalyDetector:
         Returns:
             list: List of anomaly dictionaries
         """
+        self.logger.info(f"Getting anomalies from history, current size: {len(self.anomaly_history)}")
+        
         # Convert deque to list for serialization
         history = list(self.anomaly_history)
         
         # Filter by time if we have timestamps
         if history and 'timestamp' in history[0]:
             cutoff_time = datetime.utcnow() - timedelta(minutes=minutes)
-            history = [a for a in history if a['timestamp'] > cutoff_time]
+            
+            # Improved timestamp handling
+            def parse_ts(ts):
+                if isinstance(ts, str):
+                    try:
+                        # Handle both Z and non-Z ISO formats
+                        if not ts.endswith('Z') and not '+' in ts and not '-' in ts:
+                            ts += 'Z'
+                        return datetime.fromisoformat(ts.replace('Z', '+00:00'))
+                    except Exception as e:
+                        self.logger.error(f"Failed to parse timestamp '{ts}': {e}")
+                        return datetime.utcnow()  # Fallback to current time so we don't lose anomalies
+                return ts
+            
+            # Keep anomalies within our time window, or simulated attack anomalies
+            filtered = []
+            for a in history:
+                # Always keep simulated attack anomalies
+                if a.get('is_simulation', False):
+                    filtered.append(a)
+                    continue
+                    
+                # Filter other anomalies by timestamp
+                ts = parse_ts(a['timestamp'])
+                if ts and ts > cutoff_time:
+                    filtered.append(a)
+            
+            self.logger.info(f"Filtered anomalies from {len(history)} to {len(filtered)} entries")
+            history = filtered
         
         return history
