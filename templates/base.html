@@ -139,6 +139,11 @@
                             <i class="fas fa-cog"></i> Settings
                         </a>
                     </li>
+                    <li class="nav-item">
+                        <a class="nav-link {% if request.endpoint == 'algorithm_analysis' %}active{% endif %}" href="{{ url_for('algorithm_analysis') }}">
+                            <i class="fas fa-code"></i> Algorithm Analysis
+                        </a>
+                    </li>
                 </ul>
             </div>
         </div>
@@ -171,6 +176,12 @@
                             <a class="nav-link {% if request.endpoint == 'settings' %}active{% endif %}" href="{{ url_for('settings') }}">
                                 <i class="fas fa-cog"></i>
                                 Settings
+                            </a>
+                        </li>
+                        <li class="nav-item">
+                            <a class="nav-link {% if request.endpoint == 'algorithm_analysis' %}active{% endif %}" href="{{ url_for('algorithm_analysis') }}">
+                                <i class="fas fa-code"></i>
+                                Algorithm Analysis
                             </a>
                         </li>
                     </ul>

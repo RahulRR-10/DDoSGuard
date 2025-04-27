@@ -91,6 +91,11 @@ def settings():
 def reports():
     return render_template('reports.html')
 
+@app.route('/algorithm_analysis')
+def algorithm_analysis():
+    """Show the algorithm analysis page with DAA concepts implementation details"""
+    return render_template('algorithm_analysis.html')
+
 # API endpoints
 @app.route('/api/traffic/current', methods=['GET'])
 def get_current_traffic():
