@@ -83,6 +83,19 @@
         self._cleanup(time.time())
         return sum(self.buckets.values())</code></pre>
           
+          <h5>Interactive Simulation</h5>
+          <p>See the sliding window algorithm in action:</p>
+          <div class="sliding-window-demo border p-2 mb-3">
+            <div class="window-container d-flex mb-2 overflow-hidden" style="height: 60px; position: relative;">
+              <div id="sliding-window" class="d-flex" style="position: absolute; transition: transform 0.5s ease;"></div>
+            </div>
+            <div class="controls">
+              <button id="add-event" class="btn btn-sm btn-primary">Add Event</button>
+              <button id="advance-time" class="btn btn-sm btn-secondary">Advance Time</button>
+              <span class="ms-2">Count: <span id="window-count">0</span></span>
+            </div>
+          </div>
+          
           <h5>Complexity Analysis</h5>
           <ul>
             <li><strong>Time Complexity</strong>: 
@@ -127,6 +140,33 @@
     # Inverse the score (low entropy = high anomaly)
     anomaly_score = 1.0 - normalized_entropy
     return anomaly_score</code></pre>
+          
+          <h5>Interactive Simulation</h5>
+          <p>Experiment with IP distribution patterns and see how entropy changes:</p>
+          <div class="entropy-demo border p-2 mb-3">
+            <div class="mb-2">
+              <div class="mb-2 d-flex align-items-center">
+                <span class="me-2">Traffic pattern:</span>
+                <select id="traffic-pattern" class="form-select form-select-sm" style="width: auto;">
+                  <option value="normal">Normal (diverse IPs)</option>
+                  <option value="attack">Attack (concentrated IPs)</option>
+                  <option value="mixed">Mixed pattern</option>
+                </select>
+                <button id="calculate-entropy" class="btn btn-sm btn-primary ms-2">Calculate Entropy</button>
+              </div>
+              <div id="ip-distribution" class="mb-2 p-2 bg-dark" style="height: 60px; border-radius: 4px;"></div>
+            </div>
+            <div class="results">
+              <div class="d-flex justify-content-between">
+                <div>Entropy Value: <span id="entropy-value" class="fw-bold">0.0</span></div>
+                <div>Anomaly Score: <span id="anomaly-score" class="fw-bold">0.0</span></div>
+              </div>
+              <div class="progress mt-2" style="height: 20px;">
+                <div id="entropy-bar" class="progress-bar" role="progressbar" style="width: 0%;" aria-valuenow="0" aria-valuemin="0" aria-valuemax="100"></div>
+              </div>
+              <div id="entropy-interpretation" class="mt-2 small"></div>
+            </div>
+          </div>
           
           <h5>Complexity Analysis</h5>
           <ul>
@@ -189,6 +229,26 @@
             del self.cache[lru.key]
             self.size -= 1</code></pre>
           
+          <h5>Interactive Simulation</h5>
+          <p>See the LRU Cache in action:</p>
+          <div class="lru-demo border p-2 mb-3">
+            <div class="mb-2">
+              <div class="mb-2 d-flex">
+                <div class="input-group input-group-sm me-2" style="width: auto;">
+                  <span class="input-group-text">IP:</span>
+                  <input type="text" id="lru-ip" class="form-control" value="192.168.1.1">
+                </div>
+                <button id="lru-add" class="btn btn-sm btn-primary">Add to Cache</button>
+                <button id="lru-get" class="btn btn-sm btn-secondary ms-2">Get from Cache</button>
+              </div>
+              <div class="small mb-2">Cache capacity: <span id="lru-capacity">5</span> items</div>
+            </div>
+            <div class="lru-visualization p-2 bg-dark text-light rounded mb-2" style="min-height: 60px;">
+              <div id="lru-cache-display" class="d-flex flex-wrap"></div>
+            </div>
+            <div id="lru-log" class="small text-muted"></div>
+          </div>
+          
           <h5>Complexity Analysis</h5>
           <ul>
             <li><strong>Time Complexity</strong>: O(1) for both get and put operations</li>
@@ -227,6 +287,34 @@
     def update_weight(self, delta):
         # Amortized weight update
         self.weight = (self.weight * 0.95) + (delta * 0.05)</code></pre>
+          
+          <h5>Interactive Simulation</h5>
+          <p>Visualize IP connection patterns in a network graph:</p>
+          <div class="graph-demo border p-2 mb-3">
+            <div class="mb-2">
+              <div class="mb-2 d-flex">
+                <div class="input-group input-group-sm me-2" style="width: auto;">
+                  <span class="input-group-text">Source IP:</span>
+                  <input type="text" id="source-ip" class="form-control" value="10.0.0.1">
+                </div>
+                <div class="input-group input-group-sm me-2" style="width: auto;">
+                  <span class="input-group-text">Target IP:</span>
+                  <input type="text" id="target-ip" class="form-control" value="10.0.0.2">
+                </div>
+                <button id="add-connection" class="btn btn-sm btn-primary">Add Connection</button>
+              </div>
+            </div>
+            <div class="graph-visualization p-2 bg-dark rounded mb-2" style="height: 200px; position: relative; overflow: hidden;">
+              <div id="ip-graph" style="width: 100%; height: 100%;"></div>
+            </div>
+            <div class="small mb-2">
+              <span>Nodes represent IPs, edges represent connections between them. Thicker edges indicate more connections.</span>
+            </div>
+            <div class="mb-2">
+              <button id="add-legitimate" class="btn btn-sm btn-outline-success me-2">Simulate Legitimate Traffic</button>
+              <button id="add-ddos" class="btn btn-sm btn-outline-danger">Simulate DDoS Pattern</button>
+            </div>
+          </div>
           
           <h5>Complexity Analysis</h5>
           <ul>
@@ -372,6 +460,36 @@
             <li><strong>Space Complexity</strong>: O(n) where n is the number of tracked threats</li>
           </ul>
           
+          <h5>Interactive Simulation</h5>
+          <p>See the Priority Queue (Min Heap) in action:</p>
+          <div class="priority-queue-demo border p-2 mb-3">
+            <div class="mb-2">
+              <div class="mb-2 d-flex">
+                <div class="input-group input-group-sm me-2" style="width: auto;">
+                  <span class="input-group-text">IP:</span>
+                  <input type="text" id="heap-ip" class="form-control" value="203.0.113.42">
+                </div>
+                <div class="input-group input-group-sm me-2" style="width: auto;">
+                  <span class="input-group-text">Threat:</span>
+                  <input type="number" id="heap-score" class="form-control" min="0" max="1" step="0.1" value="0.6">
+                </div>
+                <button id="heap-add" class="btn btn-sm btn-primary">Add Threat</button>
+                <button id="heap-pop" class="btn btn-sm btn-warning ms-2">Mitigate Top Threat</button>
+              </div>
+            </div>
+            <div class="heap-visualization p-2 bg-dark text-light rounded mb-2" style="min-height: 100px;">
+              <div id="binary-heap-display" class="d-flex flex-wrap justify-content-center"></div>
+            </div>
+            <div class="small mb-2">
+              <div class="d-flex justify-content-between">
+                <div>Light Threshold (0.4): Rate Limit</div>
+                <div>Medium Threshold (0.6): Challenge</div>
+                <div>Severe Threshold (0.8): Block</div>
+              </div>
+            </div>
+            <div id="heap-log" class="small text-muted"></div>
+          </div>
+          
           <h5>Heap Data Structure Benefits</h5>
           <p>The binary heap implementation provides efficient prioritization of threats while maintaining logarithmic time complexity for operations, allowing the system to scale to handle large numbers of potential threats.</p>
         </div>
@@ -460,4 +578,8 @@
     </div>
   </div>
 </div>
+{% endblock %}
+
+{% block scripts %}
+<script src="{{ url_for('static', filename='js/algorithm-simulations.js') }}"></script>
 {% endblock %}
