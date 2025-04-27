@@ -85,6 +85,29 @@
           
           <h5>Interactive Simulation</h5>
           <p>See the sliding window algorithm in action:</p>
+          
+          <div class="accordion mb-3" id="slidingWindowAccordion">
+            <div class="accordion-item">
+              <h2 class="accordion-header">
+                <button class="accordion-button collapsed" type="button" data-bs-toggle="collapse" data-bs-target="#slidingWindowInfo" aria-expanded="false" aria-controls="slidingWindowInfo">
+                  How this simulation works
+                </button>
+              </h2>
+              <div id="slidingWindowInfo" class="accordion-collapse collapse" data-bs-parent="#slidingWindowAccordion">
+                <div class="accordion-body">
+                  <p><strong>Sliding Window Algorithm Simulation:</strong></p>
+                  <ul>
+                    <li>Click <strong>"Add Event"</strong> to add a request to the current time window</li>
+                    <li>Click <strong>"Advance Time"</strong> to simulate time passing</li>
+                    <li>Notice how older events gradually "slide out" of the window</li>
+                    <li>The <strong>Count</strong> shows the current number of events in the window</li>
+                    <li>This simulates how we track network requests over a time period</li>
+                  </ul>
+                </div>
+              </div>
+            </div>
+          </div>
+          
           <div class="sliding-window-demo border p-2 mb-3">
             <div class="window-container d-flex mb-2 overflow-hidden" style="height: 60px; position: relative;">
               <div id="sliding-window" class="d-flex" style="position: absolute; transition: transform 0.5s ease;"></div>
@@ -143,6 +166,34 @@
           
           <h5>Interactive Simulation</h5>
           <p>Experiment with IP distribution patterns and see how entropy changes:</p>
+          
+          <div class="accordion mb-3" id="entropyAccordion">
+            <div class="accordion-item">
+              <h2 class="accordion-header">
+                <button class="accordion-button collapsed" type="button" data-bs-toggle="collapse" data-bs-target="#entropyInfo" aria-expanded="false" aria-controls="entropyInfo">
+                  How this simulation works
+                </button>
+              </h2>
+              <div id="entropyInfo" class="accordion-collapse collapse" data-bs-parent="#entropyAccordion">
+                <div class="accordion-body">
+                  <p><strong>Entropy-Based Detection Simulation:</strong></p>
+                  <ul>
+                    <li>Select a traffic pattern from the dropdown:</li>
+                    <ul>
+                      <li><strong>Normal</strong>: Diverse IPs (high entropy)</li>
+                      <li><strong>Attack</strong>: Concentrated from few IPs (low entropy)</li>
+                      <li><strong>Mixed</strong>: Combination of both patterns</li>
+                    </ul>
+                    <li>Click <strong>"Calculate Entropy"</strong> to see the resulting entropy value</li>
+                    <li>The <strong>Anomaly Score</strong> is inversely related to entropy</li>
+                    <li>Lower entropy = higher anomaly score = more likely DDoS attack</li>
+                    <li>The progress bar shows entropy level (high is green, low is red)</li>
+                  </ul>
+                </div>
+              </div>
+            </div>
+          </div>
+          
           <div class="entropy-demo border p-2 mb-3">
             <div class="mb-2">
               <div class="mb-2 d-flex align-items-center">
@@ -231,6 +282,30 @@
           
           <h5>Interactive Simulation</h5>
           <p>See the LRU Cache in action:</p>
+          
+          <div class="accordion mb-3" id="lruAccordion">
+            <div class="accordion-item">
+              <h2 class="accordion-header">
+                <button class="accordion-button collapsed" type="button" data-bs-toggle="collapse" data-bs-target="#lruInfo" aria-expanded="false" aria-controls="lruInfo">
+                  How this simulation works
+                </button>
+              </h2>
+              <div id="lruInfo" class="accordion-collapse collapse" data-bs-parent="#lruAccordion">
+                <div class="accordion-body">
+                  <p><strong>LRU Cache Simulation:</strong></p>
+                  <ul>
+                    <li>Enter an IP address in the input field</li>
+                    <li>Click <strong>"Add to Cache"</strong> to add or update it in the cache</li>
+                    <li>Click <strong>"Get from Cache"</strong> to retrieve it (brings it to front of cache)</li>
+                    <li>Notice that when the cache reaches capacity (5 items), the least recently used IP is removed</li>
+                    <li>More recently accessed IPs stay in the cache longer</li>
+                    <li>This is how our system efficiently tracks active IPs with O(1) access time</li>
+                  </ul>
+                </div>
+              </div>
+            </div>
+          </div>
+          
           <div class="lru-demo border p-2 mb-3">
             <div class="mb-2">
               <div class="mb-2 d-flex">
@@ -290,6 +365,30 @@
           
           <h5>Interactive Simulation</h5>
           <p>Visualize IP connection patterns in a network graph:</p>
+          
+          <div class="accordion mb-3" id="graphAccordion">
+            <div class="accordion-item">
+              <h2 class="accordion-header">
+                <button class="accordion-button collapsed" type="button" data-bs-toggle="collapse" data-bs-target="#graphInfo" aria-expanded="false" aria-controls="graphInfo">
+                  How this simulation works
+                </button>
+              </h2>
+              <div id="graphInfo" class="accordion-collapse collapse" data-bs-parent="#graphAccordion">
+                <div class="accordion-body">
+                  <p><strong>Network Graph Simulation:</strong></p>
+                  <ul>
+                    <li>Enter a <strong>Source IP</strong> and <strong>Target IP</strong> and click "Add Connection" to create individual connections</li>
+                    <li>Click <strong>"Simulate Legitimate Traffic"</strong> to see normal network patterns with diverse connections</li>
+                    <li>Click <strong>"Simulate DDoS Pattern"</strong> to see attack patterns with many sources targeting the same destination</li>
+                    <li><strong>Nodes</strong> represent IP addresses, <strong>edges</strong> represent connections between them</li>
+                    <li>Thicker edges mean more connections between those IPs</li>
+                    <li>The graph visualization helps identify attack patterns that aren't obvious when looking at individual requests</li>
+                  </ul>
+                </div>
+              </div>
+            </div>
+          </div>
+          
           <div class="graph-demo border p-2 mb-3">
             <div class="mb-2">
               <div class="mb-2 d-flex">
@@ -462,6 +561,36 @@
           
           <h5>Interactive Simulation</h5>
           <p>See the Priority Queue (Min Heap) in action:</p>
+          
+          <div class="accordion mb-3" id="priorityQueueAccordion">
+            <div class="accordion-item">
+              <h2 class="accordion-header">
+                <button class="accordion-button collapsed" type="button" data-bs-toggle="collapse" data-bs-target="#priorityQueueInfo" aria-expanded="false" aria-controls="priorityQueueInfo">
+                  How this simulation works
+                </button>
+              </h2>
+              <div id="priorityQueueInfo" class="accordion-collapse collapse" data-bs-parent="#priorityQueueAccordion">
+                <div class="accordion-body">
+                  <p><strong>Priority Queue (Min Heap) Simulation:</strong></p>
+                  <ul>
+                    <li>Enter an <strong>IP address</strong> and a <strong>Threat Score</strong> (0.0-1.0)</li>
+                    <li>Click <strong>"Add Threat"</strong> to add the IP to the priority queue</li>
+                    <li>Click <strong>"Mitigate Top Threat"</strong> to remove and handle the highest-priority threat</li>
+                    <li>The visualization shows the binary heap structure (parent-child relationships)</li>
+                    <li>Notice how the highest threat score always "bubbles up" to the top of the heap</li>
+                    <li>Different colors indicate the mitigation action based on thresholds:</li>
+                    <ul>
+                      <li><strong>0.0-0.4</strong>: No action (green)</li>
+                      <li><strong>0.4-0.6</strong>: Rate limit (yellow)</li>
+                      <li><strong>0.6-0.8</strong>: Challenge with CAPTCHA (orange)</li>
+                      <li><strong>0.8-1.0</strong>: Block IP (red)</li>
+                    </ul>
+                  </ul>
+                </div>
+              </div>
+            </div>
+          </div>
+          
           <div class="priority-queue-demo border p-2 mb-3">
             <div class="mb-2">
               <div class="mb-2 d-flex">
