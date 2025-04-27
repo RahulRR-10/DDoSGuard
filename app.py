@@ -1,6 +1,7 @@
 import os
 import logging
 import random
+import numpy as np
 from datetime import datetime, timedelta
 from flask import Flask, render_template, request, jsonify, redirect, url_for, flash
 from flask_sqlalchemy import SQLAlchemy
@@ -11,6 +12,32 @@ from db import db
 # Configure logging
 logging.basicConfig(level=logging.DEBUG)
 logger = logging.getLogger(__name__)
+
+# Utility function to convert numpy types to Python types
+def convert_numpy_types(obj):
+    """
+    Recursively converts numpy types in a nested structure to native Python types.
+    Handles dictionaries, lists, and numpy scalar types.
+    
+    Args:
+        obj: The object to convert
+        
+    Returns:
+        The object with all numpy types converted to Python types
+    """
+    if isinstance(obj, dict):
+        return {k: convert_numpy_types(v) for k, v in obj.items()}
+    elif isinstance(obj, list):
+        return [convert_numpy_types(item) for item in obj]
+    elif isinstance(obj, np.ndarray):
+        return obj.tolist()
+    elif hasattr(obj, 'dtype') and np.issubdtype(obj.dtype, np.integer):
+        return int(obj)
+    elif hasattr(obj, 'dtype') and np.issubdtype(obj.dtype, np.floating):
+        return float(obj)
+    elif hasattr(obj, 'dtype') and np.issubdtype(obj.dtype, np.bool_):
+        return bool(obj)
+    return obj
 
 # Create Flask application
 app = Flask(__name__)
@@ -69,6 +96,8 @@ def reports():
 def get_current_traffic():
     try:
         metrics = traffic_profiler.get_current_metrics()
+        # Convert any numpy types to Python types
+        metrics = convert_numpy_types(metrics)
         app.logger.debug(f"Returning current traffic metrics: {metrics}")
         return jsonify(metrics)
     except Exception as e:
@@ -87,6 +116,8 @@ def get_current_traffic():
 def get_traffic_history():
     try:
         history = traffic_profiler.get_traffic_history()
+        # Convert any numpy types to Python types
+        history = convert_numpy_types(history)
         app.logger.debug(f"Returning traffic history with {len(history)} items")
         return jsonify(history)
     except Exception as e:
@@ -98,6 +129,8 @@ def get_traffic_history():
 def get_anomalies():
     try:
         anomalies = anomaly_detector.get_anomalies()
+        # Convert any numpy types to Python types
+        anomalies = convert_numpy_types(anomalies)
         app.logger.debug(f"Returning {len(anomalies)} anomalies")
         return jsonify(anomalies)
     except Exception as e:
@@ -271,6 +304,8 @@ def stop_simulation():
 def get_attack_status():
     try:
         status = attack_simulator.get_attack_status()
+        # Convert any numpy types to Python types
+        status = convert_numpy_types(status)
         app.logger.debug(f"Returning attack status: {status}")
         return jsonify(status)
     except Exception as e:
