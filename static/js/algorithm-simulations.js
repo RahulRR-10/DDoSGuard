@@ -4,25 +4,42 @@
  */
 
 document.addEventListener('DOMContentLoaded', () => {
+  console.log("Algorithm simulation script loaded!");
+  
   // Initialize all visualizations when they're available on the page
   if (document.getElementById('sliding-window')) {
+    console.log("Initializing sliding window demo");
     initializeSlidingWindow();
+  } else {
+    console.log("Sliding window element not found");
   }
   
   if (document.getElementById('ip-distribution')) {
+    console.log("Initializing entropy demo");
     initializeEntropyDemo();
+  } else {
+    console.log("IP distribution element not found");
   }
   
   if (document.getElementById('lru-cache-display')) {
+    console.log("Initializing LRU cache demo");
     initializeLRUDemo();
+  } else {
+    console.log("LRU cache display element not found");
   }
   
   if (document.getElementById('ip-graph')) {
+    console.log("Initializing graph demo");
     initializeGraphDemo();
+  } else {
+    console.log("IP graph element not found");
   }
   
   if (document.getElementById('binary-heap-display')) {
+    console.log("Initializing heap demo");
     initializeHeapDemo();
+  } else {
+    console.log("Binary heap display element not found");
   }
 });
 
