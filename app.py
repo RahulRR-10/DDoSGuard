@@ -109,6 +109,8 @@ def get_anomalies():
 def get_mitigation_status():
     try:
         status = mitigation_system.get_status()
+        # Convert any numpy types to Python types for serialization
+        status = convert_numpy_types(status)
         app.logger.debug(f"Returning mitigation status: {status}")
         return jsonify(status)
     except Exception as e:

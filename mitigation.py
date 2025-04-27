@@ -601,10 +601,13 @@ class MitigationSystem:
                         neg_score, timestamp, ip = self.threat_queue[i]
                         score = -neg_score  # Convert negative score back to positive
                         age = time.time() - timestamp
+                        # Convert potential numpy types to regular Python types
+                        score_val = float(score) if hasattr(score, 'item') else score
+                        age_val = int(age) if hasattr(age, 'item') else round(age)
                         top_threats.append({
                             'ip': ip,
-                            'score': round(score, 3),
-                            'age_seconds': round(age)
+                            'score': round(score_val, 3),
+                            'age_seconds': age_val
                         })
                 
                 queue_stats = {
