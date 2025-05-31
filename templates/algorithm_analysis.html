@@ -68,20 +68,16 @@
         <div class="card-body">
           <h5>Implementation</h5>
           <p>Used in the Traffic Profiler for efficient tracking of recent requests:</p>
-          <pre class="bg-dark text-light p-3"><code>class SlidingWindowCounter:
-    def __init__(self, window_size=60):
-        self.window_size = window_size  # in seconds
-        self.buckets = {}  # timestamp -> count
-        
-    def increment(self, amount=1):
-        current_time = time.time()
-        self._cleanup(current_time)
-        
-        self.buckets[current_time] = self.buckets.get(current_time, 0) + amount
-        
-    def get_count(self):
-        self._cleanup(time.time())
-        return sum(self.buckets.values())</code></pre>
+          <div class="bg-dark text-light p-3 rounded mb-3">
+            <strong>Algorithm Steps:</strong>
+            <ol>
+              <li>Divide time into fixed-size buckets (e.g., 1 second each).</li>
+              <li>When a request arrives, increment the count for the current time bucket.</li>
+              <li>Periodically remove buckets that are older than the window size (e.g., 60 seconds ago).</li>
+              <li>To get the total count, sum the values in all current buckets.</li>
+            </ol>
+            <p>This ensures only recent events are counted, and old events automatically expire.</p>
+          </div>
           
           <h5>Interactive Simulation</h5>
           <p>See the sliding window algorithm in action:</p>
@@ -148,21 +144,16 @@
         <div class="card-body">
           <h5>Implementation</h5>
           <p>Used in Anomaly Detection to measure randomness in IP distributions:</p>
-          <pre class="bg-dark text-light p-3"><code>def _entropy_based_detection(self, metrics):
-    """
-    Shannon entropy calculation:
-    H(X) = -sum(p_i * log2(p_i)) for all i
-    
-    Where p_i is the probability of seeing IP i
-    Low entropy = few IPs dominate (potential DDoS)
-    High entropy = many different IPs (normal traffic)
-    """
-    entropy = metrics.get('entropy_value', 0)
-    normalized_entropy = min(1.0, max(0, entropy / 8.0))
-    
-    # Inverse the score (low entropy = high anomaly)
-    anomaly_score = 1.0 - normalized_entropy
-    return anomaly_score</code></pre>
+          <div class="bg-dark text-light p-3 rounded mb-3">
+            <strong>Algorithm Steps:</strong>
+            <ol>
+              <li>Count the number of requests from each unique IP address in the current window.</li>
+              <li>Calculate the probability of each IP (number of requests from IP / total requests).</li>
+              <li>Compute Shannon entropy: H(X) = -sum(p<sub>i</sub> * log2(p<sub>i</sub>)) for all IPs.</li>
+              <li>Normalize the entropy value to a 0-1 scale.</li>
+              <li>Low entropy (few IPs dominate) indicates a possible DDoS attack; high entropy means normal traffic.</li>
+            </ol>
+          </div>
           
           <h5>Interactive Simulation</h5>
           <p>Experiment with IP distribution patterns and see how entropy changes:</p>
@@ -241,44 +232,15 @@
         <div class="card-body">
           <h5>Implementation</h5>
           <p>Used in the Mitigation System for efficient tracking of IP addresses:</p>
-          <pre class="bg-dark text-light p-3"><code>class LRUCache:
-    """
-    LRU Cache with O(1) operations using a doubly-linked list
-    and a dictionary for direct access.
-    """
-    def __init__(self, capacity):
-        self.capacity = capacity
-        self.cache = {}  # key -> [value, node]
-        self.head = Node(0, 0)  # dummy head
-        self.tail = Node(0, 0)  # dummy tail
-        self.head.next = self.tail
-        self.tail.prev = self.head
-        self.size = 0
-        
-    def get(self, key):
-        if key in self.cache:
-            # Move to front (most recently used)
-            node = self.cache[key][1]
-            self._remove(node)
-            self._add(node)
-            return self.cache[key][0]
-        return -1
-        
-    def put(self, key, value):
-        if key in self.cache:
-            self._remove(self.cache[key][1])
-        
-        node = Node(key, value)
-        self._add(node)
-        self.cache[key] = [value, node]
-        self.size += 1
-        
-        # Remove least recently used item
-        if len(self.cache) > self.capacity:
-            lru = self.head.next
-            self._remove(lru)
-            del self.cache[lru.key]
-            self.size -= 1</code></pre>
+          <div class="bg-dark text-light p-3 rounded mb-3">
+            <strong>Algorithm Steps:</strong>
+            <ol>
+              <li>Store recently seen IPs in a fixed-size cache.</li>
+              <li>When an IP is accessed, move it to the front (most recently used position).</li>
+              <li>If the cache exceeds its capacity, remove the least recently used IP (at the end).</li>
+              <li>All operations (get, put) are done in constant time using a hash map and a doubly-linked list.</li>
+            </ol>
+          </div>
           
           <h5>Interactive Simulation</h5>
           <p>See the LRU Cache in action:</p>
@@ -344,24 +306,16 @@
         <div class="card-body">
           <h5>Implementation</h5>
           <p>Used for advanced network behavior modeling:</p>
-          <pre class="bg-dark text-light p-3"><code>class IPNode:
-    """
-    Node for IP address in the attack graph.
-    Used for graph-based analysis of attack patterns.
-    """
-    def __init__(self, ip_address):
-        self.ip_address = ip_address
-        self.connections = {}  # other_ip -> weight
-        self.weight = 0.0  # importance weight
-        
-    def add_connection(self, other_ip):
-        if other_ip not in self.connections:
-            self.connections[other_ip] = 0
-        self.connections[other_ip] += 1
-        
-    def update_weight(self, delta):
-        # Amortized weight update
-        self.weight = (self.weight * 0.95) + (delta * 0.05)</code></pre>
+          <div class="bg-dark text-light p-3 rounded mb-3">
+            <strong>Algorithm Steps:</strong>
+            <ol>
+              <li>Each IP address is represented as a node in a graph.</li>
+              <li>When a connection is observed between two IPs, add an edge between their nodes (or increment the edge weight).</li>
+              <li>Track the number and strength of connections for each node.</li>
+              <li>Update node weights using an exponential moving average to reflect recent activity.</li>
+              <li>Analyze the graph to detect unusual patterns, such as many sources targeting a single node (potential DDoS).</li>
+            </ol>
+          </div>
           
           <h5>Interactive Simulation</h5>
           <p>Visualize IP connection patterns in a network graph:</p>
@@ -437,46 +391,16 @@
         <div class="card-body">
           <h5>Implementation</h5>
           <p>Uses Isolation Forest for anomaly detection:</p>
-          <pre class="bg-dark text-light p-3"><code>def _ml_based_detection(self):
-    """
-    Detect anomalies using Isolation Forest algorithm.
-    
-    Time Complexity: O(t * n * log(n)) where:
-    - t = number of trees
-    - n = sample size
-    
-    Space Complexity: O(t * n)
-    """
-    # Check if we have enough data points to train
-    if len(self.recent_metrics) < 10:
-        return 0.0
-        
-    # Extract feature matrix
-    features = []
-    for m in self.recent_metrics:
-        features.append([
-            m.get('requests_per_second', 0),
-            m.get('unique_ips', 0),
-            m.get('entropy_value', 0),
-            m.get('burst_score', 0)
-        ])
-    
-    # Train Isolation Forest model
-    model = IsolationForest(contamination=0.1)
-    model.fit(features)
-    
-    # Get anomaly score for current metrics
-    current = [
-        self.current_metrics.get('requests_per_second', 0),
-        self.current_metrics.get('unique_ips', 0),
-        self.current_metrics.get('entropy_value', 0),
-        self.current_metrics.get('burst_score', 0)
-    ]
-    
-    # Predict and normalize score (0 to 1)
-    scores = model.decision_function([current])
-    normalized_score = 1.0 - ((scores[0] + 0.5) / 1.0)
-    return max(0.0, min(1.0, normalized_score))</code></pre>
+          <div class="bg-dark text-light p-3 rounded mb-3">
+            <strong>Algorithm Steps:</strong>
+            <ol>
+              <li>Collect recent traffic metrics (requests per second, unique IPs, entropy, burst score).</li>
+              <li>When enough data is available, train an Isolation Forest model on these metrics.</li>
+              <li>For each new data point, use the model to compute an anomaly score (how isolated the point is).</li>
+              <li>Normalize the score to a 0-1 range, where higher means more anomalous.</li>
+              <li>Flag high-scoring points as potential attacks.</li>
+            </ol>
+          </div>
           
           <h5>Complexity Analysis</h5>
           <ul>
@@ -509,43 +433,16 @@
         <div class="card-body">
           <h5>Implementation</h5>
           <p>Efficiently prioritizes threats for mitigation:</p>
-          <pre class="bg-dark text-light p-3"><code>def mitigate(self, ip_address, anomaly_score):
-    """
-    Apply mitigation strategies based on anomaly score.
-    
-    Time Complexity: O(log n) where n is number of threat entries
-    Space Complexity: O(n) - linear with tracked IPs
-    """
-    # Calculate combined threat score
-    threat_score = self._calculate_combined_threat(
-        ip_address, anomaly_score, self.ip_counters.get(ip_address, 0)
-    )
-    
-    # Update priority queue (min-heap implementation)
-    if ip_address in self.threat_heap:
-        # Update existing entry
-        for i, (score, ip, timestamp) in enumerate(self.threat_heap):
-            if ip == ip_address:
-                # Remove old entry
-                self.threat_heap[i] = self.threat_heap[-1]
-                self.threat_heap.pop()
-                heapq.heapify(self.threat_heap)
-                break
-    
-    # Add new entry to heap
-    heapq.heappush(
-        self.threat_heap, 
-        (threat_score, ip_address, time.time())
-    )
-    
-    # Apply appropriate mitigation based on threat score
-    if threat_score > self.severe_threshold:
-        return self._block_ip(ip_address, 'severe')
-    elif threat_score > self.medium_threshold:
-        return self._challenge_ip(ip_address)
-    elif threat_score > self.light_threshold:
-        return self._rate_limit_ip(ip_address)
-    return 'none'</code></pre>
+          <div class="bg-dark text-light p-3 rounded mb-3">
+            <strong>Algorithm Steps:</strong>
+            <ol>
+              <li>For each IP, calculate a threat score based on recent activity and anomaly scores.</li>
+              <li>Store all threats in a min-heap (priority queue) ordered by threat score.</li>
+              <li>When a new threat is detected, insert or update its entry in the heap (logarithmic time).</li>
+              <li>Always process the highest-priority (most severe) threat first (top of the heap).</li>
+              <li>Apply mitigation actions (rate limit, challenge, block) based on the threat score thresholds.</li>
+            </ol>
+          </div>
           
           <h5>Complexity Analysis</h5>
           <ul>

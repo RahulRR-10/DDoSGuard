@@ -20,63 +20,116 @@
     <script src="https://cdn.jsdelivr.net/npm/chartjs-adapter-moment@1.0.1/dist/chartjs-adapter-moment.min.js"></script>
     
     <style>
-        /* Custom styles */
+        html, body {
+            background: #181a1b !important;
+            color: #e0e0e0 !important;
+            font-family: 'Inter', 'Segoe UI', Arial, sans-serif;
+        }
+        .navbar, .navbar-dark, .bg-dark {
+            background: #181a1b !important;
+            border-bottom: 1px solid #232526;
+        }
         .sidebar {
-            min-height: calc(100vh - 56px);
-            box-shadow: inset -1px 0 0 rgba(0, 0, 0, .1);
+            background: #1c1e20 !important;
+            color: #b0b0b0;
+            min-height: 100vh;
+            box-shadow: none;
+            border-right: 1px solid #232526;
         }
-        
-        .chart-container {
-            position: relative;
-            height: 300px;
-            width: 100%;
-            margin-bottom: 1.5rem;
+        .sidebar .nav-link {
+            color: #b0b0b0;
+            border: none;
+            background: none;
+            transition: background 0.2s, color 0.2s;
         }
-        
-        .small-chart-container {
-            position: relative;
-            height: 200px;
-            width: 100%;
-            margin-bottom: 1rem;
+        .sidebar .nav-link.active, .sidebar .nav-link:hover {
+            background: #232526 !important;
+            color: #4fd1c5 !important;
+            border-left: 3px solid #4fd1c5;
         }
-        
-        .status-card {
-            border-left: 4px solid var(--bs-info);
+        .sidebar-heading {
+            color: #666;
         }
-        
-        .status-card.warning {
-            border-left: 4px solid var(--bs-warning);
+        .card, .card-header, .card-body {
+            background: #232526 !important;
+            border: none;
+            box-shadow: none;
+            color: #e0e0e0;
         }
-        
-        .status-card.danger {
-            border-left: 4px solid var(--bs-danger);
+        .card-header {
+            border-bottom: 1px solid #232526;
         }
-        
-        .status-card.success {
-            border-left: 4px solid var(--bs-success);
+        .metric-box {
+            background: #232526 !important;
+            border: 1px solid #232526;
+            border-radius: 8px;
+            color: #e0e0e0;
         }
-        
-        .threat-meter {
-            height: 10px;
+        .metric-box .label {
+            color: #888;
         }
-        
-        /* Active nav link */
-        .nav-link.active {
-            background-color: rgba(var(--bs-secondary-rgb), 0.15);
-            color: var(--bs-info);
-            border-left: 3px solid var(--bs-info);
+        .progress, .progress-bar {
+            background: #232526;
         }
-        
-        .nav-link i {
+        .progress-bar {
+            background: linear-gradient(90deg, #4fd1c5 0%, #38b2ac 100%);
+        }
+        .table, .table th, .table td {
+            background: #232526 !important;
+            color: #e0e0e0 !important;
+            border-color: #232526 !important;
+        }
+        .table-hover tbody tr:hover {
+            background: #2d3133 !important;
+        }
+        .alert {
+            background: #232526;
+            color: #e0e0e0;
+            border: 1px solid #333;
+        }
+        .btn, .btn-outline-primary, .btn-outline-secondary {
+            border-radius: 6px;
+            box-shadow: none;
+        }
+        .btn-outline-primary {
+            color: #4fd1c5;
+            border-color: #4fd1c5;
+        }
+        .btn-outline-primary:hover, .btn-outline-primary:focus {
+            background: #4fd1c5;
+            color: #181a1b;
+        }
+        .btn-outline-secondary {
+            color: #b0b0b0;
+            border-color: #444;
+        }
+        .btn-outline-secondary:hover, .btn-outline-secondary:focus {
+            background: #444;
+            color: #fff;
+        }
+        .form-select, .form-control {
+            background: #232526;
+            color: #e0e0e0;
+            border: 1px solid #333;
+        }
+        .form-select:focus, .form-control:focus {
+            background: #232526;
+            color: #fff;
+            border-color: #4fd1c5;
+            box-shadow: none;
+        }
+        .border-bottom {
+            border-bottom: 1px solid #232526 !important;
+        }
+        .nav-link i, .sidebar .nav-link i {
+            color: #4fd1c5 !important;
+        }
+        .sidebar .nav-link.active i {
+            color: #4fd1c5 !important;
+        }
+        .sidebar .nav-link i {
             margin-right: 8px;
         }
-        
-        /* Improve table readability */
-        .table-hover tbody tr:hover {
-            background-color: rgba(var(--bs-info-rgb), 0.1);
-        }
-        
-        /* Flash messages */
         .alert-container {
             position: fixed;
             top: 10px;
@@ -84,23 +137,18 @@
             z-index: 1050;
             max-width: 350px;
         }
-        
-        /* Metrics boxes */
-        .metric-box {
-            border: 1px solid rgba(var(--bs-secondary-rgb), 0.2);
-            border-radius: 5px;
-            padding: 1rem;
-            background-color: rgba(var(--bs-dark-rgb), 0.1);
+        /* Remove box-shadows and extra borders for minimalism */
+        .shadow, .box-shadow, .card, .navbar, .sidebar, .form-control, .form-select {
+            box-shadow: none !important;
         }
-        
-        .metric-box .value {
-            font-size: 1.5rem;
-            font-weight: bold;
+        /* Hide scrollbars for a cleaner look */
+        ::-webkit-scrollbar {
+            width: 8px;
+            background: #181a1b;
         }
-        
-        .metric-box .label {
-            font-size: 0.8rem;
-            color: var(--bs-secondary);
+        ::-webkit-scrollbar-thumb {
+            background: #232526;
+            border-radius: 4px;
         }
     </style>
     
@@ -151,7 +199,7 @@
     
     <div class="container-fluid">
         <div class="row">
-            <nav class="col-md-3 col-lg-2 d-md-block bg-light sidebar collapse">
+            <nav class="col-md-3 col-lg-2 d-md-block sidebar collapse">
                 <div class="position-sticky pt-3">
                     <ul class="nav flex-column">
                         <li class="nav-item">
