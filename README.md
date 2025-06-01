@@ -50,6 +50,35 @@ Each attack type produces a unique threat pattern on the dashboard:
 - **Slowloris**: Gradual increase in threat level
 - **Distributed**: Chaotic, variable threat pattern
 
+## 🔍 Data Analysis & Algorithms (DAA)
+
+SentinelDDoS employs sophisticated algorithms and data analysis techniques to ensure accurate detection and mitigation of DDoS attacks:
+
+### Core Algorithms
+
+1. **Entropy Analysis**
+   - Shannon entropy calculation for traffic randomness
+   - Adaptive thresholding for anomaly detection
+   - Protocol-specific entropy baselines
+
+2. **Statistical Analysis**
+   - Moving average calculations
+   - Standard deviation monitoring
+   - Z-score analysis for outlier detection
+   - Time-series pattern recognition
+
+3. **Machine Learning Models**
+   - Supervised learning for attack classification
+   - Unsupervised anomaly detection
+   - Feature engineering for traffic patterns
+   - Model training and validation pipelines
+
+4. **Performance Optimization**
+   - Efficient data structures for high-speed processing
+   - Parallel processing for real-time analysis
+   - Memory optimization techniques
+   - Asynchronous I/O operations
+
 ## 🏗 System Architecture
 
 SentinelDDoS is built on a modular architecture for maximum flexibility and scalability:
@@ -182,6 +211,42 @@ Customize the system to your specific needs:
 - `attack_simulator.py`: Attack simulation logic
 - `models.py`: Database models
 - `db.py`: Database configuration
+
+## 🧠 Algorithm Implementation Details
+
+### Entropy-Based Detection
+```python
+def calculate_entropy(ip_frequencies, total_packets):
+    """Calculate Shannon entropy for IP distribution"""
+    entropy = 0.0
+    for count in ip_frequencies.values():
+        probability = count / total_packets
+        if probability > 0:
+            entropy -= probability * math.log2(probability)
+    return entropy
+```
+
+### Statistical Analysis
+- Moving average calculation for traffic baselining
+- Standard deviation monitoring for anomaly detection
+- Correlation analysis between different traffic metrics
+
+### Machine Learning Pipeline
+1. **Feature Extraction**
+   - Packet rate analysis
+   - Protocol distribution
+   - Source IP distribution
+   - Payload size patterns
+
+2. **Model Training**
+   - Supervised learning with labeled attack data
+   - Cross-validation for model evaluation
+   - Hyperparameter tuning
+
+3. **Real-time Classification**
+   - Low-latency prediction
+   - Confidence scoring
+   - Adaptive learning from new patterns
 
 ## 📜 License
 
