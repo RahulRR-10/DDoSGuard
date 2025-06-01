@@ -1,15 +1,38 @@
-# SentinelShield - DDoS Detection and Mitigation System
+# SentinelDDoS (SentinelShield) - Advanced DDoS Protection Platform
 
-SentinelShield is an advanced cybersecurity platform designed to detect, visualize, and mitigate DDoS attacks in real-time. The system combines traffic profiling, anomaly detection algorithms, and automated mitigation strategies to protect your infrastructure from various types of DDoS attacks.
+SentinelDDoS (also known as SentinelShield) is a comprehensive cybersecurity solution designed to detect, analyze, and mitigate Distributed Denial of Service (DDoS) attacks in real-time. Built with a focus on performance and accuracy, the system employs advanced algorithms and machine learning techniques to identify and neutralize threats before they impact your infrastructure.
 
-## Features
+## 🚀 Key Features
 
-- **Real-time Traffic Analysis**: Monitor network traffic patterns and detect anomalies as they occur
-- **Interactive Dashboard**: Visual representation of traffic metrics, threat levels, and attack indicators
-- **Attack Simulation Lab**: Test your detection systems with various attack types and configurations
-- **Automated Mitigation**: Apply intelligent rate limiting and IP blocking strategies
-- **Customizable Settings**: Adjust detection thresholds and mitigation policies to your needs
-- **Comprehensive Reporting**: Generate detailed attack reports for post-analysis
+- **Advanced Traffic Profiling**
+  - Real-time traffic pattern analysis
+  - Baseline behavior establishment
+  - Protocol and payload inspection
+  - Traffic flow correlation
+
+- **Intelligent Anomaly Detection**
+  - Entropy-based detection
+  - Statistical analysis
+  - Machine learning models
+  - Adaptive thresholding
+
+- **Automated Mitigation**
+  - Dynamic rate limiting
+  - IP reputation system
+  - Behavioral blocking
+  - Traffic shaping
+
+- **Comprehensive Visualization**
+  - Real-time threat dashboard
+  - Historical analytics
+  - Attack pattern recognition
+  - Performance metrics
+
+- **Advanced Attack Simulation**
+  - Multiple attack vectors
+  - Customizable parameters
+  - Realistic traffic generation
+  - Impact assessment
 
 ## Attack Simulation Types
 
@@ -27,52 +50,92 @@ Each attack type produces a unique threat pattern on the dashboard:
 - **Slowloris**: Gradual increase in threat level
 - **Distributed**: Chaotic, variable threat pattern
 
-## System Components
+## 🏗 System Architecture
 
-SentinelShield consists of several integrated components:
+SentinelDDoS is built on a modular architecture for maximum flexibility and scalability:
 
-- **Traffic Profiler**: Analyzes network traffic and establishes normal behavior patterns
-- **Anomaly Detector**: Uses entropy analysis, burst detection, and machine learning to identify abnormal traffic
-- **Mitigation System**: Applies countermeasures to mitigate detected attacks
-- **Attack Simulator**: Generates synthetic attack traffic for testing and training
+### Core Components
 
-## Installation
+1. **Traffic Profiler** (`traffic_profiler.py`)
+   - Traffic pattern analysis
+   - Baseline establishment
+   - Protocol analysis
+   - Traffic classification
+
+2. **Anomaly Detector** (`anomaly_detector.py`)
+   - Entropy analysis
+   - Statistical modeling
+   - ML-based detection
+   - Threshold management
+
+3. **Mitigation Engine** (`mitigation.py`)
+   - Rate limiting
+   - IP blocking
+   - Traffic filtering
+   - Policy enforcement
+
+4. **Attack Simulator** (`attack_simulator.py`)
+   - Multiple attack vectors
+   - Traffic generation
+   - Attack customization
+   - Impact simulation
+
+### Web Interface
+- **Dashboard**: Real-time monitoring
+- **Simulator**: Attack simulation controls
+- **Reports**: Historical analysis
+- **Settings**: System configuration
+
+## 🛠 Installation & Setup
 
 ### Prerequisites
 
-- Python 3.8+
-- Flask
-- SQLAlchemy
-- NumPy, SciPy, scikit-learn
+- Python 3.8 or higher
+- pip (Python package manager)
 - Modern web browser (Chrome, Firefox, Edge)
+- 4GB RAM minimum (8GB recommended)
+- 2 CPU cores minimum (4+ recommended)
 
-### Setup
+### Quick Start
 
-1. Clone the repository:
-   ```
-   git clone <repository-url>
-   cd SentinelShield
+1. **Clone the repository**
+   ```bash
+   git clone https://github.com/yourusername/SentinelDDoS.git
+   cd SentinelDDoS
    ```
 
-2. Install dependencies:
+2. **Set up a virtual environment** (recommended)
+   ```bash
+   python -m venv venv
+   source venv/bin/activate  # On Windows: venv\Scripts\activate
    ```
+
+3. **Install dependencies**
+   ```bash
    pip install -r requirements.txt
    ```
 
-3. Initialize the database:
-   ```
-   python -c "from app import app; from db import db; app.app_context().push(); db.create_all()"
+4. **Initialize the database**
+   ```bash
+   python -c "from app import create_app; app = create_app(); app.app_context().push(); from extensions import db; db.create_all()"
    ```
 
-4. Start the application:
-   ```
+5. **Start the application**
+   ```bash
    python app.py
    ```
 
-5. Open your browser and navigate to:
-   ```
-   http://localhost:5000
-   ```
+6. **Access the web interface**
+   Open your browser and navigate to: [http://localhost:5000](http://localhost:5000)
+
+### Configuration
+
+Edit `config.py` to customize settings:
+- Database configuration
+- Detection thresholds
+- Mitigation policies
+- Logging preferences
+- API endpoints
 
 ## Usage
 
@@ -120,10 +183,35 @@ Customize the system to your specific needs:
 - `models.py`: Database models
 - `db.py`: Database configuration
 
-## License
+## 📜 License
 
-[Specify license information here]
+This project is licensed under the MIT License - see the [LICENSE](LICENSE) file for details.
 
-## Acknowledgements
+## 🤝 Contributing
 
-SentinelShield incorporates several open-source libraries and research in the fields of network security, anomaly detection, and DDoS mitigation.
+Contributions are welcome! Please read our [Contributing Guidelines](CONTRIBUTING.md) for details on our code of conduct and the process for submitting pull requests.
+
+## 📚 Resources
+
+- [API Documentation](docs/API.md)
+- [Developer Guide](docs/DEVELOPER.md)
+- [Troubleshooting](docs/TROUBLESHOOTING.md)
+
+## 🙏 Acknowledgements
+
+SentinelDDoS stands on the shoulders of giants. We're grateful to the open-source community and the following projects:
+
+- Flask and Flask extensions
+- Scikit-learn and scientific Python stack
+- D3.js and other visualization libraries
+- Academic research in network security and anomaly detection
+
+## 📞 Support
+
+For support, please open an issue in the GitHub repository or contact us at support@sentinel-ddos.com
+
+---
+
+<div align="center">
+  Made with ❤️ by the SentinelDDoS Team
+</div>
