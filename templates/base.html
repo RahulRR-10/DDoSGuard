@@ -150,6 +150,19 @@
             background: #232526;
             border-radius: 4px;
         }
+        
+        /* Chart container styles for larger, more visible graphs */
+        .chart-container {
+            height: 400px !important; /* Increased from default */
+            margin-bottom: 20px;
+            position: relative;
+        }
+        
+        /* Make sure charts are responsive within their containers */
+        canvas {
+            width: 100% !important;
+            max-width: 100%;
+        }
     </style>
     
     {% block head %}{% endblock %}
