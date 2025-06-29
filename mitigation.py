@@ -850,9 +850,50 @@ class MitigationSystem:
                     attack_type = attack_status.get('attack_type', 'flooding')
                     intensity = attack_status.get('intensity', 5)
                     
-                    # Scale values based on attack intensity (1-10)
-                    blocked_count = int(intensity * 1.5)  # 1-15 blocked IPs
-                    rate_limited = int(intensity * 2.5)   # 2-25 rate-limited IPs
+                    # Get attack duration in seconds to scale values over time
+                    start_time = datetime.fromisoformat(attack_status.get('start_time')) if attack_status.get('start_time') else datetime.utcnow() - timedelta(minutes=1)
+                    duration_seconds = (datetime.utcnow() - start_time).total_seconds()
+                    
+                    # Calculate growth factor based on attack duration
+                    # Values will grow more quickly for higher intensity attacks
+                    growth_factor = min(1.0, duration_seconds / (60 * 5))  # Cap at 5 minutes
+                    
+                    # Base values scaled by intensity
+                    base_blocked = int(intensity * 1.5)  # 1-15 blocked IPs
+                    base_rate_limited = int(intensity * 2.5)  # 2-25 rate-limited IPs
+                    
+                    # Dynamic values that increase over time
+                    # Different growth curves based on attack type
+                    if attack_type == 'flooding':
+                        # Flooding attacks get more blocks than rate limits
+                        blocked_growth = 1.5
+                        rate_limited_growth = 0.8
+                    elif attack_type == 'slowloris':
+                        # Slowloris gets more rate limits
+                        blocked_growth = 0.7
+                        rate_limited_growth = 2.0
+                    elif attack_type == 'syn_flood':
+                        # SYN flood gets many blocks
+                        blocked_growth = 2.0
+                        rate_limited_growth = 0.5
+                    else:
+                        # Default growth
+                        blocked_growth = 1.0
+                        rate_limited_growth = 1.0
+                    
+                    # Calculate current values with randomized noise
+                    time_factor = duration_seconds / 60  # Minutes factor
+                    
+                    # Add some randomization to make it look more realistic
+                    blocked_random = random.randint(-1, 2)
+                    rate_limited_random = random.randint(-2, 3)
+                    
+                    # Dynamically growing metrics (base + growth over time)
+                    blocked_ips_count = max(0, int(base_blocked + (blocked_growth * time_factor * intensity) + blocked_random))
+                    rate_limited_ips = max(0, int(base_rate_limited + (rate_limited_growth * time_factor * intensity) + rate_limited_random))
+                    
+                    # Active mitigations is the sum of both
+                    active_mitigations = blocked_ips_count + rate_limited_ips
                     
                     # Generate more varied and realistic sample recent actions
                     now = datetime.utcnow()
@@ -929,9 +970,13 @@ class MitigationSystem:
                         'blocked_ips_count': blocked_count
                     }
                 
+                # Define active_mitigations if not already defined
+                if 'active_mitigations' not in locals():
+                    active_mitigations = blocked_ips_count + rate_limited_ips
+                
                 # Return actual status
                 return {
-                    'active_mitigations': blocked_ips_count + rate_limited_ips,
+                    'active_mitigations': active_mitigations,
                     'recent_actions': recent_actions,
                     'rate_limited_ips': rate_limited_ips,
                     'blocked_ips_count': blocked_ips_count

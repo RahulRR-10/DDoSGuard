@@ -287,22 +287,25 @@ function initCharts() {
 }
 
 function startDataRefresh() {
-    // Set up periodic refresh of data
-    setInterval(refreshChartData, 2000);
-
-    // Initial data load
-    console.log('Dashboard initialization complete');
-    console.log('Mitigation status table element:', document.getElementById('mitigationStatusTable'));
-    console.log('Blocked IPs table element:', document.getElementById('blockedIPsTableBody'));
-
-    // Start refreshing table data - more frequently to catch mitigation updates
+    // Clear any existing intervals to prevent duplicates
+    if (window.chartUpdateInterval) clearInterval(window.chartUpdateInterval);
+    if (window.tableUpdateInterval) clearInterval(window.tableUpdateInterval);
+    if (window.attackStatusInterval) clearInterval(window.attackStatusInterval);
+    
+    // Set up data refresh intervals
+    window.chartUpdateInterval = setInterval(refreshChartData, 10000); // Update charts every 10 seconds
+    window.tableUpdateInterval = setInterval(refreshTableData, 2000);  // Update tables every 2 seconds - more frequent for mitigation status
+    window.attackStatusInterval = setInterval(checkAttackSimulationStatus, 4000); // Check attack status every 4 seconds
+    
+    // Immediately refresh data on load
+    refreshChartData();
     refreshTableData();
-    setInterval(refreshTableData, 3000); // More frequent updates for mitigation data
-    
-    // Check if an attack simulation is running
     checkAttackSimulationStatus();
-    setInterval(checkAttackSimulationStatus, 5000);
     
+    console.log('Dashboard initialization complete with enhanced refresh rates');
+    console.log('Mitigation status table element:', document.getElementById('mitigationStatusTable'));
+    console.log('Recent Actions table body element:', document.getElementById('recentActionsTableBody'));
+
     // Initial check for attack status from localStorage
     const savedAttackStatus = localStorage.getItem('attackRunning');
     if (savedAttackStatus === 'true') {
@@ -1090,50 +1093,56 @@ function updateMitigationStatus(data) {
     const statusTableBody = document.querySelector('#mitigationStatusTable tbody');
     if (!statusTableBody) return;
     
-    // Populate the mitigation status table
+    // Ensure we have valid data with defaults
+    const mitigationData = {
+        active_mitigations: data && data.active_mitigations !== undefined ? data.active_mitigations : 0,
+        rate_limited_ips: data && data.rate_limited_ips !== undefined ? data.rate_limited_ips : 0,
+        blocked_ips_count: data && data.blocked_ips_count !== undefined ? data.blocked_ips_count : 0
+    };
+    
+    // Force the status table to update
     statusTableBody.innerHTML = `
         <tr>
             <td>Active Mitigations</td>
-            <td>${data.active_mitigations || 0}</td>
+            <td>${mitigationData.active_mitigations}</td>
         </tr>
         <tr>
             <td>Rate-Limited IPs</td>
-            <td>${data.rate_limited_ips || 0}</td>
+            <td>${mitigationData.rate_limited_ips}</td>
         </tr>
         <tr>
             <td>Blocked IPs</td>
-            <td>${data.blocked_ips_count || 0}</td>
+            <td>${mitigationData.blocked_ips_count}</td>
         </tr>
     `;
     
     // Update the recent actions table if we have data
-    const recentActionsTable = document.getElementById('recentActionsTable');
-    if (recentActionsTable && data.recent_actions && data.recent_actions.length > 0) {
-        const actionsTableBody = recentActionsTable.querySelector('tbody');
-        if (actionsTableBody) {
-            actionsTableBody.innerHTML = '';
-            
-            data.recent_actions.forEach(action => {
-                const actionTime = new Date(action.timestamp).toLocaleTimeString();
-                const row = document.createElement('tr');
-                row.innerHTML = `
-                    <td>${actionTime}</td>
-                    <td>${action.ip_address}</td>
-                    <td>${action.action}</td>
-                    <td>${action.score ? action.score.toFixed(4) : 'N/A'}</td>
-                `;
-                actionsTableBody.appendChild(row);
-            });
-        }
-    } else if (recentActionsTable) {
-        const actionsTableBody = recentActionsTable.querySelector('tbody');
-        if (actionsTableBody) {
-            actionsTableBody.innerHTML = `
-                <tr>
-                    <td colspan="4" class="text-center">No recent mitigation actions</td>
-                </tr>
+    // Note: We're now using the new recentActionsTableBody element
+    const actionsTableBody = document.getElementById('recentActionsTableBody');
+    
+    if (actionsTableBody && data && data.recent_actions && data.recent_actions.length > 0) {
+        // Clear the table
+        actionsTableBody.innerHTML = '';
+        
+        // Add each action as a row
+        data.recent_actions.forEach(action => {
+            const actionTime = new Date(action.timestamp).toLocaleTimeString();
+            const row = document.createElement('tr');
+            row.innerHTML = `
+                <td>${actionTime}</td>
+                <td>${action.ip_address}</td>
+                <td>${action.action}</td>
+                <td>${action.score ? action.score.toFixed(4) : 'N/A'}</td>
             `;
-        }
+            actionsTableBody.appendChild(row);
+        });
+    } else if (actionsTableBody) {
+        // Show empty state
+        actionsTableBody.innerHTML = `
+            <tr>
+                <td colspan="4" class="text-center">No recent mitigation actions</td>
+            </tr>
+        `;
     }
 }
 

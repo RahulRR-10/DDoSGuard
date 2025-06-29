@@ -5,6 +5,64 @@
 {% block header %}Real-Time Monitoring Dashboard{% endblock %}
 
 {% block content %}
+<style>
+    .mitigation-actions-container {
+        max-height: 250px;
+        overflow-y: auto;
+        margin-bottom: 0;
+        border: 1px solid #dee2e6;
+        border-top: none;
+    }
+    
+    #recentActionsTable {
+        margin-bottom: 0;
+        border-bottom: none;
+    }
+    
+    .mitigation-actions-table {
+        margin-bottom: 0;
+    }
+    
+    .mitigation-actions-container::-webkit-scrollbar {
+        width: 8px;
+        height: 8px;
+    }
+    
+    .mitigation-actions-container::-webkit-scrollbar-track {
+        background: #f1f1f1;
+        border-radius: 4px;
+    }
+    
+    .mitigation-actions-container::-webkit-scrollbar-thumb {
+        background: #888;
+        border-radius: 4px;
+    }
+    
+    .mitigation-actions-container::-webkit-scrollbar-thumb:hover {
+        background: #555;
+    }
+    
+    /* Fix table column widths */
+    #recentActionsTable th:nth-child(1),
+    .mitigation-actions-table td:nth-child(1) {
+        width: 25%;
+    }
+    
+    #recentActionsTable th:nth-child(2),
+    .mitigation-actions-table td:nth-child(2) {
+        width: 35%;
+    }
+    
+    #recentActionsTable th:nth-child(3),
+    .mitigation-actions-table td:nth-child(3) {
+        width: 20%;
+    }
+    
+    #recentActionsTable th:nth-child(4),
+    .mitigation-actions-table td:nth-child(4) {
+        width: 20%;
+    }
+</style>
 <div class="container-fluid">
     <!-- Threat Level Indicator -->
     <div class="row mb-4">
@@ -215,7 +273,7 @@
                 <div class="card-header">
                     <h5 class="mb-0">Recent Mitigation Actions</h5>
                 </div>
-                <div class="card-body">
+                <div class="card-body p-0">
                     <div class="table-responsive">
                         <table class="table table-sm table-hover" id="recentActionsTable">
                             <thead>
@@ -226,7 +284,11 @@
                                     <th>Score</th>
                                 </tr>
                             </thead>
-                            <tbody>
+                        </table>
+                    </div>
+                    <div class="mitigation-actions-container">
+                        <table class="table table-sm table-hover mitigation-actions-table">
+                            <tbody id="recentActionsTableBody">
                                 <tr>
                                     <td colspan="4" class="text-center">No recent mitigation actions</td>
                                 </tr>
