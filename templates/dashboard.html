@@ -6,6 +6,31 @@
 
 {% block content %}
 <style>
+/* Algorithm column and toggle */
+.algorithm-slider {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+}
+
+.algorithm-slider .form-check-input:checked {
+    background-color: #0d6efd;
+    border-color: #0d6efd;
+}
+
+.algorithm-column {
+    font-family: 'Courier New', monospace;
+    font-size: 0.85em;
+    color: #495057;
+    white-space: nowrap;
+}
+
+/* Make sure the toggle switch is properly aligned */
+.form-switch .form-check-input {
+    margin-top: 0.25rem;
+}
+</style>
+<style>
     .mitigation-actions-container {
         max-height: 250px;
         overflow-y: auto;
@@ -42,25 +67,56 @@
         background: #555;
     }
     
-    /* Fix table column widths */
-    #recentActionsTable th:nth-child(1),
-    .mitigation-actions-table td:nth-child(1) {
-        width: 25%;
+    /* Table styling for consistent column widths */
+    #recentActionsTable {
+        table-layout: fixed;
+        width: 100%;
+        margin-bottom: 0;
+    }
+    
+    #recentActionsTable th,
+    #recentActionsTable td {
+        vertical-align: middle;
+        white-space: nowrap;
+        overflow: hidden;
+        text-overflow: ellipsis;
+        padding: 0.5rem;
+    }
+    
+    #recentActionsTable th:first-child,
+    #recentActionsTable td:first-child {
+        width: 120px;
     }
     
     #recentActionsTable th:nth-child(2),
-    .mitigation-actions-table td:nth-child(2) {
-        width: 35%;
+    #recentActionsTable td:nth-child(2) {
+        width: 150px;
+        font-family: 'Courier New', monospace;
     }
     
     #recentActionsTable th:nth-child(3),
-    .mitigation-actions-table td:nth-child(3) {
-        width: 20%;
+    #recentActionsTable td:nth-child(3) {
+        width: 100px;
+        text-transform: capitalize;
     }
     
     #recentActionsTable th:nth-child(4),
-    .mitigation-actions-table td:nth-child(4) {
-        width: 20%;
+    #recentActionsTable td:nth-child(4) {
+        width: 80px;
+        text-align: right;
+        font-variant-numeric: tabular-nums;
+    }
+    
+    #recentActionsTable th:last-child,
+    #recentActionsTable td:last-child {
+        min-width: 180px;
+        white-space: normal;
+    }
+    
+    /* Style for algorithm column */
+    .algorithm-column {
+        font-family: 'Courier New', monospace;
+        font-size: 0.85em;
     }
 </style>
 <div class="container-fluid">
@@ -271,26 +327,31 @@
         <div class="col-md-8 mb-4">
             <div class="card h-100">
                 <div class="card-header">
-                    <h5 class="mb-0">Recent Mitigation Actions</h5>
+                    <div class="d-flex justify-content-between align-items-center">
+                        <h5 class="mb-0">Recent Mitigation Actions</h5>
+                        <div class="algorithm-slider ms-3">
+                            <div class="form-check form-switch">
+                                <input class="form-check-input" type="checkbox" id="algorithmToggle" checked>
+                                <label class="form-check-label" for="algorithmToggle">Show Algorithms</label>
+                            </div>
+                        </div>
+                    </div>
                 </div>
                 <div class="card-body p-0">
                     <div class="table-responsive">
-                        <table class="table table-sm table-hover" id="recentActionsTable">
+                        <table class="table table-sm table-hover mb-0" id="recentActionsTable">
                             <thead>
                                 <tr>
-                                    <th>Time</th>
-                                    <th>IP Address</th>
-                                    <th>Action</th>
-                                    <th>Score</th>
+                                    <th style="width: 120px;">Time</th>
+                                    <th style="width: 150px;">IP Address</th>
+                                    <th style="width: 100px;">Action</th>
+                                    <th style="width: 80px;">Score</th>
+                                    <th class="algorithm-column" style="min-width: 180px;">Algorithm</th>
                                 </tr>
                             </thead>
-                        </table>
-                    </div>
-                    <div class="mitigation-actions-container">
-                        <table class="table table-sm table-hover mitigation-actions-table">
                             <tbody id="recentActionsTableBody">
                                 <tr>
-                                    <td colspan="4" class="text-center">No recent mitigation actions</td>
+                                    <td colspan="5" class="text-center">No recent mitigation actions</td>
                                 </tr>
                             </tbody>
                         </table>

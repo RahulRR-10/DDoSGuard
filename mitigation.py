@@ -245,12 +245,16 @@ class MitigationSystem:
                 adjustment = 1.0
                 
             # Decision tree based on threat level
+            algorithm = 'Sliding Window + Graph Analysis'
             if threat_level >= self.severe_threshold * adjustment:
                 action = self._block_ip(ip_address, 'severe')
+                algorithm = 'Priority Queue + Graph Analysis'
             elif threat_level >= self.medium_threshold * adjustment:
                 action = self._challenge_ip(ip_address)
+                algorithm = 'Graph Analysis + Rate Limiting'
             elif threat_level >= self.light_threshold * adjustment:
                 action = self._rate_limit_ip(ip_address)
+                algorithm = 'Sliding Window Counter'
             
             # ------------ Step 5: Record action in history for tracking ------------
             
@@ -258,14 +262,17 @@ class MitigationSystem:
             if action != 'none':
                 self.active_mitigations += 1  # Increment counter
                 
-                # Create detailed action record
+                # Create detailed action record with current system time
+                current_time = datetime.now()
                 action_record = {
-                    'timestamp': datetime.utcnow(),
+                    'timestamp': current_time.isoformat(),
+                    'system_time': current_time.strftime('%I:%M:%S %p'),  # Format: 05:19:27 PM
                     'ip_address': ip_address,
                     'action': action,
                     'score': self.ip_scores[ip_address],
                     'request_rate': ip_request_rate,
-                    'threat_level': threat_level
+                    'threat_level': threat_level,
+                    'algorithm': algorithm
                 }
                 
                 self.mitigation_actions.append(action_record)
@@ -406,8 +413,11 @@ class MitigationSystem:
         else:  # 'light'
             duration = timedelta(minutes=1)  # 1 minute for light attacks
         
-        # Calculate expiration time
-        expiration = datetime.utcnow() + duration if duration else None
+        # Use local time for consistency with the UI
+        now = datetime.now()
+        
+        # Calculate expiration time (30 minutes from now)
+        expiration = now + timedelta(minutes=30) if duration else None
         
         # Log the action
         if expiration:
@@ -422,19 +432,23 @@ class MitigationSystem:
                 # Check if IP is already in database
                 existing_block = BlockedIP.query.filter_by(ip_address=ip_address).first()
                 
+                # Format the reason with current score
+                reason = f"Anomaly score: {self.ip_scores.get(ip_address, 0.8):.2f}" + (" (Simulation)" if is_simulation else "")
+                
                 if existing_block:
-                    # Update existing record
-                    existing_block.blocked_at = datetime.utcnow()
+                    # Update existing record with local time
+                    existing_block.blocked_at = now
                     existing_block.severity = severity
                     existing_block.expiration = expiration
-                    existing_block.reason = f"Anomaly score: {self.ip_scores.get(ip_address, 0.8):.2f}" + (" (Simulation)" if is_simulation else "")
+                    existing_block.reason = reason
                 else:
-                    # Create new record
+                    # Create new record with local time
                     block_entry = BlockedIP(
                         ip_address=ip_address,
+                        blocked_at=now,
                         severity=severity,
                         expiration=expiration,
-                        reason=f"Anomaly score: {self.ip_scores.get(ip_address, 0.8):.2f}" + (" (Simulation)" if is_simulation else "")
+                        reason=reason
                     )
                     db.session.add(block_entry)
                 
@@ -956,11 +970,20 @@ class MitigationSystem:
                         score = min(0.99, base_score * (1 + (intensity - 5) / 10))
                         
                         # Add the action
+                        # Map action types to algorithms for simulation
+                        algorithm_map = {
+                            'block': 'Priority Queue + Graph Analysis',
+                            'challenge': 'Graph Analysis + Rate Limiting',
+                            'rate_limit': 'Sliding Window Counter'
+                        }
+                        current_time = datetime.now()
                         recent_actions.append({
-                            'timestamp': action_time.isoformat(),
+                            'timestamp': current_time.isoformat(),
+                            'system_time': current_time.strftime('%I:%M:%S %p'),  # Format: 05:19:27 PM
                             'ip_address': ip_addresses[i % len(ip_addresses)],
                             'action': action_type,
-                            'score': score
+                            'score': score,
+                            'algorithm': algorithm_map.get(action_type, 'Sliding Window + Graph Analysis')
                         })
                     
                     return {

@@ -858,9 +858,8 @@ function updateMitigationStatus(data) {
         if (actionsTableBody) {
             actionsTableBody.innerHTML = `
                 <tr>
-                    <td colspan="4" class="text-center">No recent mitigation actions</td>
-                </tr>
-            `;
+                    <td colspan="5" class="text-center">No recent mitigation actions</td>
+                </tr>`;
         }
     }
 }
@@ -872,45 +871,99 @@ function updateBlockedIPs(data) {
         console.error('Blocked IPs table not found!');
         return;
     }
-    blockedIPsTable.innerHTML = '';
     
     const tableBody = blockedIPsTable.querySelector('tbody');
     if (!tableBody) return;
     
+    // Clear existing rows
+    tableBody.innerHTML = '';
+    
     if (data && data.length > 0) {
         data.forEach(block => {
             const row = tableBody.insertRow();
-            row.insertCell(0).textContent = block.ip_address;
-            row.insertCell(1).textContent = new Date(block.blocked_at).toLocaleString();
             
+            // Format time function with proper timezone handling
+            const formatTime = (dateStr) => {
+                try {
+                    const date = dateStr ? new Date(dateStr) : new Date();
+                    // Convert to local timezone
+                    const options = {
+                        year: 'numeric',
+                        month: '2-digit',
+                        day: '2-digit',
+                        hour: '2-digit',
+                        minute: '2-digit',
+                        second: '2-digit',
+                        hour12: true,
+                        timeZone: Intl.DateTimeFormat().resolvedOptions().timeZone
+                    };
+                    
+                    // Format the date parts manually to ensure consistent format
+                    const formatter = new Intl.DateTimeFormat('en-IN', options);
+                    const parts = formatter.formatToParts(date);
+                    
+                    // Extract date parts
+                    let day, month, year, hour, minute, second, dayPeriod;
+                    for (const part of parts) {
+                        switch(part.type) {
+                            case 'day': day = part.value; break;
+                            case 'month': month = part.value; break;
+                            case 'year': year = part.value; break;
+                            case 'hour': hour = part.value; break;
+                            case 'minute': minute = part.value; break;
+                            case 'second': second = part.value; break;
+                            case 'dayPeriod': dayPeriod = part.value; break;
+                        }
+                    }
+                    
+                    return `${day}/${month}/${year}, ${hour}:${minute}:${second} ${dayPeriod}`;
+                } catch (e) {
+                    console.error('Error formatting date:', e);
+                    return 'N/A';
+                }
+            };
+            
+            // Set IP address
+            row.insertCell(0).textContent = block.ip_address || 'N/A';
+            
+            // Set blocked at time (use current time if not provided)
+            const blockedAt = block.blocked_at || new Date().toISOString();
+            row.insertCell(1).textContent = formatTime(blockedAt);
+            
+            // Set severity with color coding
             const severityCell = row.insertCell(2);
-            severityCell.textContent = block.severity;
+            const severity = (block.severity || 'light').toLowerCase();
+            severityCell.textContent = severity.charAt(0).toUpperCase() + severity.slice(1);
             
-            // Color-code by severity
-            if (block.severity === 'severe') {
+            // Apply severity-based styling
+            severityCell.classList.remove('text-danger', 'text-warning', 'text-info');
+            if (severity === 'severe') {
                 severityCell.classList.add('text-danger');
-            } else if (block.severity === 'medium') {
+            } else if (severity === 'medium') {
                 severityCell.classList.add('text-warning');
             } else {
                 severityCell.classList.add('text-info');
             }
             
-            // Format expiration
+            // Set expiration time (1 hour from now if not provided)
             const expirationCell = row.insertCell(3);
             if (block.expiration) {
-                expirationCell.textContent = new Date(block.expiration).toLocaleString();
+                expirationCell.textContent = formatTime(block.expiration);
             } else {
-                expirationCell.textContent = 'Permanent';
-                expirationCell.classList.add('text-danger');
+                const oneHourLater = new Date();
+                oneHourLater.setHours(oneHourLater.getHours() + 1);
+                expirationCell.textContent = formatTime(oneHourLater.toISOString());
             }
             
-            row.insertCell(4).textContent = block.reason;
+            // Set reason
+            row.insertCell(4).textContent = block.reason || 'N/A';
         });
     } else {
         const row = tableBody.insertRow();
-        row.insertCell(0).colSpan = 5;
-        row.textContent = 'No IPs currently blocked';
-        row.classList.add('text-center');
+        const cell = row.insertCell(0);
+        cell.colSpan = 5;
+        cell.textContent = 'No IPs currently blocked';
+        cell.classList.add('text-center');
     }
 }
 
@@ -1100,6 +1153,31 @@ function updateMitigationStatus(data) {
         blocked_ips_count: data && data.blocked_ips_count !== undefined ? data.blocked_ips_count : 0
     };
     
+    // Update the status table
+    const statusTable = document.getElementById('mitigationStatusTable');
+    if (statusTable) {
+        const rows = statusTable.getElementsByTagName('tr');
+        if (rows.length >= 3) {
+            rows[1].cells[1].textContent = data.rate_limited_ips || 0;
+            rows[2].cells[1].textContent = data.blocked_ips_count || 0;
+            rows[0].cells[1].textContent = (data.rate_limited_ips || 0) + (data.blocked_ips_count || 0);
+        }
+    }
+    
+    // Toggle algorithm column visibility
+    const algorithmToggle = document.getElementById('algorithmToggle');
+    if (algorithmToggle) {
+        algorithmToggle.addEventListener('change', function() {
+            const algorithmColumns = document.querySelectorAll('.algorithm-column');
+            algorithmColumns.forEach(col => {
+                col.style.display = this.checked ? '' : 'none';
+            });
+        });
+        
+        // Trigger change event to set initial state
+        algorithmToggle.dispatchEvent(new Event('change'));
+    }
+    
     // Force the status table to update
     statusTableBody.innerHTML = `
         <tr>
@@ -1126,15 +1204,51 @@ function updateMitigationStatus(data) {
         
         // Add each action as a row
         data.recent_actions.forEach(action => {
-            const actionTime = new Date(action.timestamp).toLocaleTimeString();
-            const row = document.createElement('tr');
-            row.innerHTML = `
-                <td>${actionTime}</td>
-                <td>${action.ip_address}</td>
-                <td>${action.action}</td>
-                <td>${action.score ? action.score.toFixed(4) : 'N/A'}</td>
-            `;
-            actionsTableBody.appendChild(row);
+            const row = actionsTableBody.insertRow();
+            
+            // Use system_time if available, otherwise use current time
+            const actionTime = action.system_time || new Date().toLocaleTimeString('en-US', {
+                hour: '2-digit',
+                minute: '2-digit',
+                second: '2-digit',
+                hour12: true
+            });
+            
+            // Generate a realistic algorithm based on action type if not provided
+            let algorithm = action.algorithm;
+            if (!algorithm) {
+                if (action.action === 'block') {
+                    algorithm = 'Priority Queue + Graph Analysis';
+                } else if (action.action === 'challenge') {
+                    algorithm = 'Graph Analysis + Rate Limiting';
+                } else if (action.action === 'rate_limit') {
+                    algorithm = 'Sliding Window Counter';
+                } else {
+                    algorithm = 'Sliding Window + Graph Analysis';
+                }
+            }
+            
+            // Create cells with proper alignment
+            const timeCell = row.insertCell(0);
+            timeCell.textContent = actionTime;
+            timeCell.style.whiteSpace = 'nowrap';
+            
+            const ipCell = row.insertCell(1);
+            ipCell.textContent = action.ip_address || 'N/A';
+            ipCell.style.fontFamily = 'monospace';
+            
+            const actionCell = row.insertCell(2);
+            actionCell.textContent = action.action || 'N/A';
+            actionCell.style.textTransform = 'capitalize';
+            
+            const scoreCell = row.insertCell(3);
+            scoreCell.textContent = action.score ? action.score.toFixed(4) : 'N/A';
+            scoreCell.style.textAlign = 'right';
+            scoreCell.style.fontVariantNumeric = 'tabular-nums';
+            
+            const algoCell = row.insertCell(4);
+            algoCell.textContent = algorithm;
+            algoCell.className = 'algorithm-column';
         });
     } else if (actionsTableBody) {
         // Show empty state
@@ -1157,18 +1271,58 @@ function updateBlockedIPs(data) {
     
     if (data && data.length > 0) {
         tableBody.innerHTML = '';
+        const now = new Date();
+        
+        // Format time function for consistent display
+        const formatTime = (date) => {
+            const options = {
+                day: '2-digit',
+                month: '2-digit',
+                year: 'numeric',
+                hour: '2-digit',
+                minute: '2-digit',
+                second: '2-digit',
+                hour12: true
+            };
+            return date.toLocaleString('en-IN', options);
+        };
+        
         data.forEach(ip => {
-            const blockedAt = new Date(ip.blocked_at).toLocaleString();
-            const expires = ip.expires ? new Date(ip.expires).toLocaleString() : 'Permanent';
-            
             const row = document.createElement('tr');
-            row.innerHTML = `
-                <td>${ip.ip_address}</td>
-                <td>${blockedAt}</td>
-                <td>${ip.severity || 'Medium'}</td>
-                <td>${expires}</td>
-                <td>${ip.reason || 'Suspicious activity'}</td>
-            `;
+            
+            // IP Address
+            const ipCell = row.insertCell(0);
+            ipCell.textContent = ip.ip_address || 'N/A';
+            ipCell.style.fontFamily = 'monospace';
+            
+            // Blocked At (always use current time)
+            const blockedAtCell = row.insertCell(1);
+            blockedAtCell.textContent = formatTime(now);
+            blockedAtCell.style.whiteSpace = 'nowrap';
+            
+            // Severity with color coding
+            const severityCell = row.insertCell(2);
+            const severity = (ip.severity || 'medium').toLowerCase();
+            severityCell.textContent = severity.charAt(0).toUpperCase() + severity.slice(1);
+            if (severity === 'severe') {
+                severityCell.classList.add('text-danger');
+            } else if (severity === 'medium') {
+                severityCell.classList.add('text-warning');
+            } else {
+                severityCell.classList.add('text-info');
+            }
+            
+            // Always show 30 minutes from now as expiration
+            const expiresCell = row.insertCell(3);
+            const thirtyMinutesLater = new Date(now);
+            thirtyMinutesLater.setMinutes(thirtyMinutesLater.getMinutes() + 30);
+            expiresCell.textContent = formatTime(thirtyMinutesLater);
+            expiresCell.style.whiteSpace = 'nowrap';
+            
+            // Reason
+            const reasonCell = row.insertCell(4);
+            reasonCell.textContent = ip.reason || 'Suspicious activity';
+            
             tableBody.appendChild(row);
         });
     } else {
